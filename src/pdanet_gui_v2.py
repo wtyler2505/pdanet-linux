@@ -304,11 +304,24 @@ class PdaNetGUI(Gtk.Window):
         header.set_xalign(0)
         panel.pack_start(header, False, False, 0)
 
+        # Mode selector
+        mode_label = Gtk.Label(label="CONNECTION MODE")
+        mode_label.get_style_context().add_class("metric-label")
+        mode_label.set_xalign(0)
+        panel.pack_start(mode_label, False, False, 5)
+
+        self.mode_combo = Gtk.ComboBoxText()
+        self.mode_combo.append("usb", "USB Tethering (Android)")
+        self.mode_combo.append("wifi", "WiFi Hotspot (Android)")
+        self.mode_combo.append("iphone", "iPhone Personal Hotspot")
+        self.mode_combo.set_active(0)
+        panel.pack_start(self.mode_combo, False, False, 0)
+
         # Connect/Disconnect buttons
         self.connect_button = Gtk.Button(label="▶ CONNECT")
         self.connect_button.get_style_context().add_class("button-connect")
         self.connect_button.connect("clicked", self.on_connect_clicked)
-        panel.pack_start(self.connect_button, False, False, 0)
+        panel.pack_start(self.connect_button, False, False, 5)
 
         self.disconnect_button = Gtk.Button(label="■ DISCONNECT")
         self.disconnect_button.get_style_context().add_class("button-disconnect")
