@@ -32,6 +32,7 @@ class ConnectionManager:
         self.config = get_config()
 
         self.current_interface = None
+        self.current_mode = None
         self.proxy_available = False
         self.last_error = None
 
