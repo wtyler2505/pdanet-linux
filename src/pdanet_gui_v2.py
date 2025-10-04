@@ -6,8 +6,17 @@ Cyberpunk-themed interface with full feature set
 
 import gi
 gi.require_version('Gtk', '3.0')
-gi.require_version('AppIndicator3', '0.1')
-from gi.repository import Gtk, Gdk, GLib, AppIndicator3, Pango
+from gi.repository import Gtk, Gdk, GLib
+
+# Try to import AppIndicator3, but make it optional
+try:
+    gi.require_version('AppIndicator3', '0.1')
+    from gi.repository import AppIndicator3
+    HAS_APPINDICATOR = True
+except (ValueError, ImportError):
+    HAS_APPINDICATOR = False
+    AppIndicator3 = None
+
 import sys
 import os
 from datetime import datetime
