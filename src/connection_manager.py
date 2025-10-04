@@ -214,8 +214,15 @@ class ConnectionManager:
             self.logger.error(f"Proxy validation failed: {e}")
             return False
 
-    def connect(self, mode="usb"):
-        """Initiate connection"""
+    def connect(self, mode="usb", ssid=None, password=None):
+        """
+        Initiate connection
+        
+        Args:
+            mode: Connection mode - "usb", "wifi", or "iphone"
+            ssid: WiFi/iPhone network name (required for wifi/iphone modes)
+            password: WiFi/iPhone password (optional)
+        """
         if self.state == ConnectionState.CONNECTED:
             self.logger.warning("Already connected")
             return True
@@ -228,7 +235,7 @@ class ConnectionManager:
         self.logger.info(f"Initiating {mode} connection...")
 
         # Run in thread to avoid blocking
-        thread = threading.Thread(target=self._connect_thread, args=(mode,), daemon=True)
+        thread = threading.Thread(target=self._connect_thread, args=(mode, ssid, password), daemon=True)
         thread.start()
 
         return True
