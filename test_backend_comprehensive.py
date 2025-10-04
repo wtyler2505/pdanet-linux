@@ -37,7 +37,7 @@ print("\n[1/9] MODULE IMPORT TESTS")
 print("-" * 70)
 
 def test_logger_import():
-    from logger import get_logger, Logger
+    from logger import get_logger
     logger = get_logger()
     assert logger is not None, "Logger is None"
     assert hasattr(logger, 'info'), "Logger missing info method"
