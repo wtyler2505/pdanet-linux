@@ -150,3 +150,7 @@ tests/visual/reports/*
 # MCP configuration with API keys
 .mcp.json
 .mcp (copy).json
+-e 
+# Environment files
+*.env
+*.env.*
