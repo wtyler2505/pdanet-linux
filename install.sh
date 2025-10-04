@@ -130,11 +130,19 @@ echo -e "${YELLOW}[6/7]${NC} Creating convenience commands..."
 # Create symlinks in /usr/local/bin for easy access
 ln -sf "$PROJECT_DIR/pdanet-connect" /usr/local/bin/pdanet-connect
 ln -sf "$PROJECT_DIR/pdanet-disconnect" /usr/local/bin/pdanet-disconnect
+ln -sf "$PROJECT_DIR/pdanet-wifi-connect" /usr/local/bin/pdanet-wifi-connect
+ln -sf "$PROJECT_DIR/pdanet-wifi-disconnect" /usr/local/bin/pdanet-wifi-disconnect
+ln -sf "$PROJECT_DIR/pdanet-iphone-connect" /usr/local/bin/pdanet-iphone-connect
+ln -sf "$PROJECT_DIR/pdanet-iphone-disconnect" /usr/local/bin/pdanet-iphone-disconnect
 ln -sf "$PROJECT_DIR/scripts/stealth-mode.sh" /usr/local/bin/pdanet-stealth
-ln -sf "$PROJECT_DIR/src/pdanet-gui.py" /usr/local/bin/pdanet-gui
+ln -sf "$PROJECT_DIR/src/pdanet_gui_v2.py" /usr/local/bin/pdanet-gui-v2
 
-# Make GUI executable
-chmod +x "$PROJECT_DIR/src/pdanet-gui.py"
+# Make scripts executable
+chmod +x "$PROJECT_DIR/src/pdanet_gui_v2.py"
+chmod +x "$PROJECT_DIR/pdanet-wifi-connect"
+chmod +x "$PROJECT_DIR/pdanet-wifi-disconnect"
+chmod +x "$PROJECT_DIR/pdanet-iphone-connect"
+chmod +x "$PROJECT_DIR/pdanet-iphone-disconnect"
 
 echo -e "${GREEN}✓${NC} Commands installed to /usr/local/bin"
 
