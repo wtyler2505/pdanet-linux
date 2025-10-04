@@ -1,0 +1,332 @@
+name: Visual Regression Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'tests/visual/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'tests/visual/**'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - regression
+        - responsive
+        - accessibility
+        - components
+      update_baselines:
+        description: 'Update visual baselines'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  visual-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+        display-resolution: ['1920x1080', '1366x768']
+
+    env:
+      DISPLAY: ':99'
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # Fetch full history for baseline comparison
+        fetch-depth: 0
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y \
+          xvfb \
+          gnome-screenshot \
+          scrot \
+          imagemagick \
+          python3-gi \
+          python3-gi-cairo \
+          gir1.2-gtk-3.0 \
+          gir1.2-appindicator3-0.1 \
+          libcairo2-dev \
+          libgirepository1.0-dev
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-xvfb pytest-timeout pillow numpy
+
+    - name: Set up virtual display
+      run: |
+        # Start Xvfb virtual display
+        Xvfb :99 -screen 0 ${{ matrix.display-resolution }}x24 -ac +extension GLX +render -noreset &
+        sleep 3
+
+        # Verify display is working
+        DISPLAY=:99 xdpyinfo
+
+    - name: Download baseline images (if available)
+      continue-on-error: true
+      run: |
+        # Download baselines from artifacts or S3/storage
+        # This step is optional - baselines will be created if they don't exist
+        mkdir -p tests/visual/baseline
+        echo "Baseline download step - implement based on storage solution"
+
+    - name: Run visual tests
+      timeout-minutes: 20
+      run: |
+        cd tests/visual
+
+        # Determine which test suite to run
+        TEST_SUITE="${{ github.event.inputs.test_suite || 'all' }}"
+        UPDATE_BASELINES="${{ github.event.inputs.update_baselines || 'false' }}"
+
+        # Set environment variables
+        export PYTHONPATH="${{ github.workspace }}/src:$PYTHONPATH"
+        export VISUAL_TEST_MODE=ci
+        export DISPLAY=:99
+
+        # Run tests based on input
+        if [ "$TEST_SUITE" = "all" ]; then
+          python visual_test_runner.py --all --output-dir reports_${{ matrix.python-version }}_${{ matrix.display-resolution }}
+        else
+          python visual_test_runner.py --$TEST_SUITE --output-dir reports_${{ matrix.python-version }}_${{ matrix.display-resolution }}
+        fi
+
+        # Update baselines if requested and on main branch
+        if [ "$UPDATE_BASELINES" = "true" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+          python visual_test_runner.py --all --update-baselines --output-dir reports_${{ matrix.python-version }}_${{ matrix.display-resolution }}
+        fi
+
+    - name: Generate test report summary
+      if: always()
+      run: |
+        # Create a summary report
+        REPORT_DIR="tests/visual/reports_${{ matrix.python-version }}_${{ matrix.display-resolution }}"
+
+        if [ -f "$REPORT_DIR/comprehensive_visual_test_report.json" ]; then
+          echo "## Visual Test Results (${{ matrix.python-version }}, ${{ matrix.display-resolution }})" >> $GITHUB_STEP_SUMMARY
+
+          # Extract key metrics using jq
+          TOTAL_TESTS=$(jq -r '.summary.total_tests' "$REPORT_DIR/comprehensive_visual_test_report.json")
+          PASSED_TESTS=$(jq -r '.summary.total_passed' "$REPORT_DIR/comprehensive_visual_test_report.json")
+          PASS_RATE=$(jq -r '.summary.overall_pass_rate' "$REPORT_DIR/comprehensive_visual_test_report.json")
+
+          echo "- **Total Tests:** $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Passed Tests:** $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pass Rate:** ${PASS_RATE}%" >> $GITHUB_STEP_SUMMARY
+
+          # Add status badge
+          if (( $(echo "$PASS_RATE >= 95" | bc -l) )); then
+            echo "- **Status:** ✅ EXCELLENT" >> $GITHUB_STEP_SUMMARY
+          elif (( $(echo "$PASS_RATE >= 80" | bc -l) )); then
+            echo "- **Status:** ⚠️ NEEDS ATTENTION" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Status:** ❌ FAILING" >> $GITHUB_STEP_SUMMARY
+          fi
+        else
+          echo "❌ Visual tests failed to generate report" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload test reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: visual-test-reports-${{ matrix.python-version }}-${{ matrix.display-resolution }}
+        path: |
+          tests/visual/reports_${{ matrix.python-version }}_${{ matrix.display-resolution }}/
+          tests/visual/screenshots/
+          tests/visual/diff/
+        retention-days: 30
+
+    - name: Upload baseline images
+      uses: actions/upload-artifact@v3
+      if: github.ref == 'refs/heads/main' && success()
+      with:
+        name: visual-baselines-${{ matrix.python-version }}-${{ matrix.display-resolution }}
+        path: |
+          tests/visual/baseline/
+          tests/visual/components/baseline/
+          tests/visual/responsive/baseline/
+        retention-days: 90
+
+    - name: Comment on PR (if applicable)
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request' && always()
+      with:
+        script: |
+          const fs = require('fs');
+          const path = './tests/visual/reports_${{ matrix.python-version }}_${{ matrix.display-resolution }}/comprehensive_visual_test_report.json';
+
+          if (fs.existsSync(path)) {
+            const report = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const passRate = report.summary.overall_pass_rate;
+            const totalTests = report.summary.total_tests;
+            const passedTests = report.summary.total_passed;
+
+            let status = '✅ PASSING';
+            if (passRate < 95) status = '⚠️ NEEDS ATTENTION';
+            if (passRate < 80) status = '❌ FAILING';
+
+            const body = `
+          ## Visual Test Results ${status}
+
+          **Configuration:** Python ${{ matrix.python-version }}, ${{ matrix.display-resolution }}
+
+          | Metric | Value |
+          |--------|-------|
+          | Total Tests | ${totalTests} |
+          | Passed Tests | ${passedTests} |
+          | Pass Rate | ${passRate.toFixed(1)}% |
+
+          ${passRate < 100 ? '⚠️ Some visual tests failed. Please review the detailed reports in the artifacts.' : ''}
+
+          [View detailed reports in workflow artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+          }
+
+  visual-test-summary:
+    needs: visual-tests
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+
+    - name: Create consolidated summary
+      run: |
+        echo "# Visual Testing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Process all test reports
+        TOTAL_CONFIGS=0
+        PASSING_CONFIGS=0
+
+        for report_dir in ./artifacts/visual-test-reports-*/; do
+          if [ -d "$report_dir" ]; then
+            TOTAL_CONFIGS=$((TOTAL_CONFIGS + 1))
+
+            # Check if comprehensive report exists
+            COMPREHENSIVE_REPORT="$report_dir/comprehensive_visual_test_report.json"
+            if [ -f "$COMPREHENSIVE_REPORT" ]; then
+              PASS_RATE=$(jq -r '.summary.overall_pass_rate' "$COMPREHENSIVE_REPORT")
+              CONFIG_NAME=$(basename "$report_dir" | sed 's/visual-test-reports-//')
+
+              if (( $(echo "$PASS_RATE >= 95" | bc -l) )); then
+                PASSING_CONFIGS=$((PASSING_CONFIGS + 1))
+                echo "- ✅ **$CONFIG_NAME**: ${PASS_RATE}%" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "- ❌ **$CONFIG_NAME**: ${PASS_RATE}%" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          fi
+        done
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Overall Status:** $PASSING_CONFIGS/$TOTAL_CONFIGS configurations passing" >> $GITHUB_STEP_SUMMARY
+
+        # Set job status
+        if [ "$PASSING_CONFIGS" -eq "$TOTAL_CONFIGS" ]; then
+          echo "All visual tests passed across all configurations ✅"
+          exit 0
+        else
+          echo "Some visual tests failed ❌"
+          exit 1
+        fi
+
+  update-baselines:
+    needs: visual-tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event.inputs.update_baselines == 'true'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Download baseline artifacts
+      uses: actions/download-artifact@v3
+      with:
+        pattern: visual-baselines-*
+        path: ./new-baselines
+
+    - name: Update baseline images
+      run: |
+        # Consolidate baselines from all configurations
+        # In practice, you might want to use specific configuration baselines
+
+        # Use the first available baseline set (could be made more sophisticated)
+        BASELINE_DIR=$(find ./new-baselines -name "visual-baselines-*" | head -1)
+
+        if [ -n "$BASELINE_DIR" ] && [ -d "$BASELINE_DIR" ]; then
+          echo "Updating baselines from $BASELINE_DIR"
+
+          # Copy new baselines
+          cp -r "$BASELINE_DIR"/* tests/visual/baseline/ || true
+
+          # Commit changes
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add tests/visual/baseline/
+
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: update visual test baselines
+
+            Updated by GitHub Actions after successful visual tests.
+
+            Run ID: ${{ github.run_id }}
+            Commit: ${{ github.sha }}"
+
+            git push
+            echo "✅ Baselines updated and pushed"
+          else
+            echo "ℹ️ No baseline changes to commit"
+          fi
+        else
+          echo "⚠️ No baseline artifacts found"
+        fi

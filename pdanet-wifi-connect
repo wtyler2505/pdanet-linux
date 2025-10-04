@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+# pdanet-wifi-connect - Connect to Android WiFi hotspot with carrier bypass
+#
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+PROJECT_DIR="/home/wtyler/pdanet-linux"
+STEALTH_LEVEL=3  # Aggressive by default
+
+echo -e "${GREEN}PdaNet WiFi Connector${NC}"
+echo "======================================"
+
+# Check root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}Error: Must run as root (use sudo)${NC}"
+   exit 1
+fi
+
+echo -e "${YELLOW}[1/5]${NC} Detecting WiFi interface..."
+
+# Find WiFi interface
+WIFI_IFACE=$(iw dev | awk '$1=="Interface"{print $2}' | head -1)
+
+if [ -z "$WIFI_IFACE" ]; then
+    echo -e "${RED}Error: No WiFi interface found${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} WiFi interface: $WIFI_IFACE"
+
+echo -e "${YELLOW}[2/5]${NC} Scanning for Android hotspot..."
+
+# Scan for networks
+nmcli device wifi rescan || true
+sleep 2
+
+# List available networks
+echo "Available networks:"
+nmcli -t -f SSID,SIGNAL,SECURITY device wifi list | head -10
+
+# Check if already connected
+CURRENT_SSID=$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2)
+
+if [ -n "$CURRENT_SSID" ]; then
+    echo -e "${GREEN}✓${NC} Already connected to: $CURRENT_SSID"
+else
+    echo -e "${YELLOW}Not currently connected to WiFi${NC}"
+    echo ""
+    echo "To connect to your Android hotspot:"
+    echo "  1. Enable WiFi hotspot on your Android device"
+    echo "  2. Run: nmcli device wifi connect \"SSID\" password \"PASSWORD\""
+    echo "  3. Then run this script again"
+    echo ""
+    read -p "Enter Android hotspot SSID (or press Enter to skip): " HOTSPOT_SSID
+
+    if [ -n "$HOTSPOT_SSID" ]; then
+        read -sp "Enter password: " HOTSPOT_PASS
+        echo ""
+
+        echo "Connecting to $HOTSPOT_SSID..."
+        nmcli device wifi connect "$HOTSPOT_SSID" password "$HOTSPOT_PASS"
+
+        sleep 3
+        CURRENT_SSID=$(nmcli -t -f active,ssid dev wifi | grep '^yes' | cut -d: -f2)
+
+        if [ -z "$CURRENT_SSID" ]; then
+            echo -e "${RED}Error: Connection failed${NC}"
+            exit 1
+        fi
+
+        echo -e "${GREEN}✓${NC} Connected to: $CURRENT_SSID"
+    else
+        echo -e "${RED}Error: No WiFi connection${NC}"
+        exit 1
+    fi
+fi
+
+echo -e "${YELLOW}[3/5]${NC} Verifying internet connectivity..."
+
+# Test connection
+if ping -c 1 -W 5 8.8.8.8 >/dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Internet connection verified"
+else
+    echo -e "${YELLOW}Warning: Cannot reach internet${NC}"
+fi
+
+echo -e "${YELLOW}[4/5]${NC} Enabling aggressive carrier bypass..."
+
+# Apply stealth mode
+bash "$PROJECT_DIR/scripts/wifi-stealth.sh" enable $WIFI_IFACE $STEALTH_LEVEL
+
+echo -e "${GREEN}✓${NC} Stealth mode active (Level $STEALTH_LEVEL)"
+
+echo -e "${YELLOW}[5/5]${NC} Final verification..."
+
+# Test again
+if curl --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Connection verified"
+else
+    echo -e "${YELLOW}Warning: Verification failed (may still work)${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}WiFi connection established!${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
+echo "Connected to: $CURRENT_SSID"
+echo "Interface: $WIFI_IFACE"
+echo "Stealth Level: $STEALTH_LEVEL (Aggressive)"
+echo ""
+echo -e "${YELLOW}Active Protections:${NC}"
+echo "  ✓ TTL Normalization (64/65)"
+echo "  ✓ IPv6 Blocking"
+echo "  ✓ DNS Leak Prevention"
+echo "  ✓ OS Update Blocking"
+echo "  ✓ Traffic Fingerprint Obfuscation"
+echo ""
+echo -e "${YELLOW}Note:${NC} Carrier detection avoidance is not 100% foolproof."
+echo "For maximum stealth, use a VPN over this connection."
+echo ""
+echo "To disconnect: sudo ./pdanet-wifi-disconnect"
+
+exit 0

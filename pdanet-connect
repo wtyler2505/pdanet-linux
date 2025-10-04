@@ -1,0 +1,118 @@
+#!/bin/bash
+#
+# pdanet-connect - Connect to PdaNet Android USB tethering
+# Automatically detects Android device and routes all traffic through PdaNet proxy
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Configuration
+PDANET_PROXY_IP="192.168.49.1"
+PDANET_PROXY_PORT="8000"
+REDSOCKS_PORT="12345"
+REDSOCKS_CONFIG="/etc/redsocks.conf"
+PROJECT_DIR="/home/wtyler/pdanet-linux"
+
+echo -e "${GREEN}PdaNet Linux Connector${NC}"
+echo "======================================"
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}Error: This script must be run as root (use sudo)${NC}"
+   exit 1
+fi
+
+echo -e "${YELLOW}[1/5]${NC} Detecting USB tethering interface..."
+
+# Find USB tethering interface (typically usb0, rndis0, or similar)
+IFACE=$(ip link show | grep -E "usb[0-9]|rndis[0-9]|enp.*u" | head -1 | cut -d: -f2 | tr -d ' ')
+
+if [ -z "$IFACE" ]; then
+    echo -e "${RED}Error: No USB tethering interface found!${NC}"
+    echo "Please make sure:"
+    echo "  1. Android device is connected via USB"
+    echo "  2. PdaNet+ app is running on Android"
+    echo "  3. USB tethering is enabled on Android"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Found interface: $IFACE"
+
+# Check if interface has IP
+IP_ADDR=$(ip addr show $IFACE | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+if [ -z "$IP_ADDR" ]; then
+    echo -e "${YELLOW}Warning: Interface $IFACE has no IP address, waiting...${NC}"
+    sleep 3
+    IP_ADDR=$(ip addr show $IFACE | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+    if [ -z "$IP_ADDR" ]; then
+        echo -e "${RED}Error: Interface still has no IP. Check USB tethering settings.${NC}"
+        exit 1
+    fi
+fi
+
+echo -e "${GREEN}✓${NC} Interface IP: $IP_ADDR"
+
+echo -e "${YELLOW}[2/5]${NC} Checking PdaNet proxy availability..."
+
+# Test if PdaNet proxy is accessible
+if ! curl -x http://$PDANET_PROXY_IP:$PDANET_PROXY_PORT --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+    echo -e "${RED}Error: Cannot connect to PdaNet proxy at $PDANET_PROXY_IP:$PDANET_PROXY_PORT${NC}"
+    echo "Please verify:"
+    echo "  1. PdaNet+ app is running on Android"
+    echo "  2. 'Activate USB Mode' is checked in PdaNet+ app"
+    echo "  3. Proxy is enabled in PdaNet+ settings"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} PdaNet proxy is accessible at $PDANET_PROXY_IP:$PDANET_PROXY_PORT"
+
+echo -e "${YELLOW}[3/5]${NC} Starting redsocks service..."
+
+# Check if redsocks is installed
+if ! command -v redsocks &> /dev/null; then
+    echo -e "${RED}Error: redsocks is not installed${NC}"
+    echo "Run the installer first: sudo ./install.sh"
+    exit 1
+fi
+
+# Start redsocks
+if systemctl is-active --quiet redsocks; then
+    echo -e "${YELLOW}Restarting redsocks...${NC}"
+    systemctl restart redsocks
+else
+    systemctl start redsocks
+fi
+
+echo -e "${GREEN}✓${NC} Redsocks service started"
+
+echo -e "${YELLOW}[4/5]${NC} Configuring iptables rules..."
+
+# Apply iptables rules
+bash "$PROJECT_DIR/config/iptables-rules.sh" start
+
+echo -e "${GREEN}✓${NC} Iptables rules applied"
+
+echo -e "${YELLOW}[5/5]${NC} Verifying connection..."
+
+# Test internet connectivity
+if curl --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Internet connection verified!"
+    echo ""
+    echo -e "${GREEN}========================================${NC}"
+    echo -e "${GREEN}PdaNet connection established!${NC}"
+    echo -e "${GREEN}========================================${NC}"
+    echo ""
+    echo "Your system is now routing all traffic through PdaNet."
+    echo "To disconnect, run: sudo ./pdanet-disconnect"
+else
+    echo -e "${YELLOW}Warning: Could not verify internet connection${NC}"
+    echo "Connection may still work, but verification failed."
+fi
+
+exit 0

@@ -1,0 +1,67 @@
+@startuml PdaNet_Linux_Component
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title PdaNet Linux - Component Diagram (GUI Application Detail)
+
+Person(user, "Linux User")
+
+Container_Boundary(gui_container, "GUI Application (Python GTK3)") {
+    Component(main_window, "Main Window", "GTK3", "4-panel cyberpunk dashboard with real-time updates")
+    Component(system_tray, "System Tray", "AppIndicator3", "Minimized operation with status notifications")
+    Component(theme_engine, "Theme Engine", "theme.py", "Cyberpunk CSS generator, pure black #000000 background")
+    Component(ui_controller, "UI Controller", "MVC Pattern", "Handles user interactions and updates")
+    Component(settings_dialog, "Settings Dialog", "GTK3", "Connection profiles and preferences")
+}
+
+Container_Boundary(backend_container, "Backend Services") {
+    Component(connection_service, "Connection Service", "connection_manager.py", "State machine with 5 states, health monitoring")
+    Component(stats_service, "Statistics Service", "stats_collector.py", "Bandwidth tracking from /sys/class/net/")
+    Component(config_service, "Configuration Service", "config_manager.py", "JSON settings persistence")
+    Component(logging_service, "Logging Service", "logger.py", "Rotating files + 1000-entry GUI buffer")
+}
+
+Container_Boundary(network_container, "Network Layer") {
+    Component(usb_detector, "USB Interface Detector", "Python", "Detects usb0/rndis0 interfaces")
+    Component(wifi_detector, "WiFi Interface Detector", "Python", "Detects wlan0 and hotspot connections")
+    Component(proxy_validator, "Proxy Validator", "Python", "HTTP CONNECT test to 192.168.49.1:8000")
+    Component(health_monitor, "Health Monitor", "Python Thread", "Background connectivity checks")
+}
+
+Container_Ext(stealth_system, "Carrier Bypass Engine", "Bash Scripts")
+Container_Ext(proxy_system, "Transparent Proxy", "redsocks")
+
+' UI Relationships
+Rel(user, main_window, "Views", "Real-time stats")
+Rel(user, system_tray, "Controls", "Quick actions")
+Rel(user, settings_dialog, "Configures", "Profiles")
+
+Rel(main_window, theme_engine, "Applies", "Cyberpunk styles")
+Rel(main_window, ui_controller, "Handles", "Events")
+Rel(system_tray, ui_controller, "Notifies", "Status changes")
+Rel(settings_dialog, config_service, "Saves", "User preferences")
+
+' Backend Relationships
+Rel(ui_controller, connection_service, "Commands", "Connect/Disconnect")
+Rel(ui_controller, stats_service, "Requests", "Current metrics")
+Rel(ui_controller, logging_service, "Displays", "Log entries")
+
+Rel(connection_service, usb_detector, "Checks", "USB interfaces")
+Rel(connection_service, wifi_detector, "Checks", "WiFi status")
+Rel(connection_service, proxy_validator, "Validates", "Proxy connectivity")
+Rel(connection_service, health_monitor, "Starts/Stops", "Monitoring")
+
+Rel(connection_service, stealth_system, "Controls", "Bypass layers")
+Rel(connection_service, proxy_system, "Manages", "Traffic routing")
+
+Rel(stats_service, health_monitor, "Coordinates", "Ping tests")
+Rel(logging_service, connection_service, "Logs", "State changes")
+
+' Layout hints
+Lay_D(user, main_window)
+Lay_R(main_window, connection_service)
+Lay_D(connection_service, usb_detector)
+
+SHOW_LEGEND()
+@enduml

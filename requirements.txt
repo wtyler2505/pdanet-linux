@@ -1,0 +1,15 @@
+# PdaNet Linux - Python Dependencies
+
+# GUI Framework
+PyGObject>=3.42.0  # GTK3 bindings for Python
+
+# Development Tools
+black>=23.0.0  # Code formatter (used by .claude/hooks)
+isort>=5.12.0  # Import sorter (used by .claude/hooks)
+flake8>=6.0.0  # Linter (used by .claude/hooks)
+mypy>=1.0.0  # Type checker (used by .claude/hooks)
+pytest>=7.0.0  # Test framework (used by .claude/hooks)
+pytest-cov>=4.0.0  # Coverage reporting
+
+# MCP Server (optional - for Jupyter integration)
+jupyter-mcp-server>=0.14.0  # Jupyter MCP server for notebook integration

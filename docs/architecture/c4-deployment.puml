@@ -1,0 +1,76 @@
+@startuml PdaNet_Linux_Deployment
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title PdaNet Linux - Deployment Diagram
+
+Deployment_Node(user_desktop, "User Desktop/Laptop", "Linux Mint 22.2 Cinnamon") {
+    Deployment_Node(python_runtime, "Python Runtime", "Python 3.10+") {
+        Container(gui_app, "GUI Application", "Python GTK3", "pdanet-gui-v2")
+        Container(connection_mgr, "Connection Manager", "Python", "State machine + health monitoring")
+        Container(stats_collector, "Stats Collector", "Python", "Bandwidth tracking")
+    }
+
+    Deployment_Node(system_services, "System Services", "systemd") {
+        Container(redsocks_service, "redsocks", "C Binary", "Transparent TCP-to-HTTP proxy")
+        Container(network_manager, "NetworkManager", "systemd", "WiFi connection management")
+    }
+
+    Deployment_Node(kernel_space, "Kernel Space", "Linux Kernel 6.x") {
+        Container(iptables_rules, "iptables Rules", "Netfilter", "NAT/Mangle chains for traffic control")
+        Container(network_interfaces, "Network Interfaces", "Kernel", "usb0, rndis0, wlan0")
+    }
+
+    Deployment_Node(file_system, "File System", "ext4") {
+        Container(config_files, "Configuration", "JSON/conf", "/etc/redsocks.conf, ~/.config/pdanet-linux/")
+        Container(log_files, "Log Files", "Text", "Rotating logs with GUI buffer")
+        Container(scripts, "Shell Scripts", "Bash", "/usr/local/bin/pdanet-*")
+    }
+}
+
+Deployment_Node(android_device, "Android Device", "Android 8.0+") {
+    Container(pdanet_app, "PdaNet+ App", "Android App", "HTTP proxy server on 192.168.49.1:8000")
+    Container(usb_interface, "USB Interface", "Hardware", "USB 2.0/3.0 tethering")
+    Container(wifi_hotspot, "WiFi Hotspot", "Hardware", "802.11n/ac access point")
+}
+
+Deployment_Node(carrier_infrastructure, "Carrier Network", "4G/5G Infrastructure") {
+    Container(cell_tower, "Cell Tower", "Hardware", "Radio access network")
+    Container(carrier_gateway, "Carrier Gateway", "Network Equipment", "Traffic analysis and DPI")
+}
+
+Deployment_Node(internet_services, "Internet", "Global Network") {
+    Container(web_servers, "Web Servers", "Various", "Target websites and services")
+}
+
+' Connection relationships
+Rel(gui_app, connection_mgr, "Controls")
+Rel(connection_mgr, redsocks_service, "Manages")
+Rel(connection_mgr, network_manager, "Controls")
+Rel(connection_mgr, scripts, "Executes")
+
+Rel(redsocks_service, iptables_rules, "Uses")
+Rel(iptables_rules, network_interfaces, "Routes")
+Rel(scripts, iptables_rules, "Configures")
+
+Rel(stats_collector, network_interfaces, "Monitors")
+Rel(gui_app, config_files, "Reads/Writes")
+Rel(connection_mgr, log_files, "Writes")
+
+' External connections
+Rel(network_interfaces, usb_interface, "USB Tethering", "USB 2.0/3.0")
+Rel(network_interfaces, wifi_hotspot, "WiFi Connection", "802.11n/ac")
+Rel(redsocks_service, pdanet_app, "HTTP CONNECT", "192.168.49.1:8000")
+
+Rel(pdanet_app, cell_tower, "Cellular Data", "4G/5G")
+Rel(cell_tower, carrier_gateway, "Carrier Network")
+Rel(carrier_gateway, web_servers, "Internet Access")
+
+' Layout hints
+Lay_D(user_desktop, android_device)
+Lay_R(android_device, carrier_infrastructure)
+Lay_U(carrier_infrastructure, internet_services)
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+# pdanet-wifi-disconnect - Disconnect WiFi and disable carrier bypass
+#
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+PROJECT_DIR="/home/wtyler/pdanet-linux"
+
+echo -e "${GREEN}PdaNet WiFi Disconnector${NC}"
+echo "======================================"
+
+# Check root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}Error: Must run as root (use sudo)${NC}"
+   exit 1
+fi
+
+echo -e "${YELLOW}[1/2]${NC} Disabling carrier bypass..."
+
+# Find WiFi interface
+WIFI_IFACE=$(iw dev | awk '$1=="Interface"{print $2}' | head -1)
+
+if [ -n "$WIFI_IFACE" ]; then
+    bash "$PROJECT_DIR/scripts/wifi-stealth.sh" disable $WIFI_IFACE
+    echo -e "${GREEN}✓${NC} Stealth mode disabled"
+else
+    echo -e "${YELLOW}Warning: No WiFi interface found${NC}"
+fi
+
+echo -e "${YELLOW}[2/2]${NC} Disconnecting WiFi..."
+
+# Disconnect WiFi (optional - user might want to stay connected)
+read -p "Disconnect from WiFi network? (y/N): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    nmcli device disconnect $WIFI_IFACE 2>/dev/null || true
+    echo -e "${GREEN}✓${NC} WiFi disconnected"
+else
+    echo -e "${YELLOW}WiFi connection maintained${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}Carrier bypass disabled!${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
+echo "Stealth protections removed."
+echo "Normal networking restored."
+
+exit 0

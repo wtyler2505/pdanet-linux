@@ -1,0 +1,56 @@
+#!/bin/bash
+#
+# pdanet-disconnect - Disconnect from PdaNet and restore normal networking
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+PROJECT_DIR="/home/wtyler/pdanet-linux"
+
+echo -e "${GREEN}PdaNet Linux Disconnector${NC}"
+echo "======================================"
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}Error: This script must be run as root (use sudo)${NC}"
+   exit 1
+fi
+
+echo -e "${YELLOW}[1/3]${NC} Removing iptables rules..."
+
+# Remove iptables rules
+bash "$PROJECT_DIR/config/iptables-rules.sh" stop
+
+echo -e "${GREEN}✓${NC} Iptables rules removed"
+
+echo -e "${YELLOW}[2/3]${NC} Stopping redsocks service..."
+
+# Stop redsocks
+if systemctl is-active --quiet redsocks; then
+    systemctl stop redsocks
+    echo -e "${GREEN}✓${NC} Redsocks service stopped"
+else
+    echo -e "${YELLOW}Note: Redsocks was not running${NC}"
+fi
+
+echo -e "${YELLOW}[3/3]${NC} Verifying disconnection..."
+
+# Verify internet still works (via normal connection)
+if curl --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Normal internet connection verified"
+fi
+
+echo ""
+echo -e "${GREEN}========================================${NC}"
+echo -e "${GREEN}PdaNet disconnected successfully!${NC}"
+echo -e "${GREEN}========================================${NC}"
+echo ""
+echo "Your system has been restored to normal networking."
+
+exit 0

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PdaNet Linux
+GenericName=USB Tethering Manager
+Comment=Connect to PdaNet Android USB tethering with stealth mode
+Icon=network-wireless
+Exec=/usr/local/bin/pdanet-gui
+Terminal=false
+Categories=Network;Settings;
+Keywords=pdanet;tethering;usb;internet;android;
+StartupNotify=true

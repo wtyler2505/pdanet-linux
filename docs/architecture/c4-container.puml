@@ -1,0 +1,50 @@
+@startuml PdaNet_Linux_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title PdaNet Linux - Container Diagram
+
+Person(user, "Linux User", "Desktop/laptop user")
+Person(admin, "System Administrator", "Manages installation")
+
+System_Boundary(pdanet_system, "PdaNet Linux System") {
+    Container(gui_app, "GUI Application", "Python GTK3", "Cyberpunk-themed GUI with 4-panel dashboard, connection management, and system tray")
+    Container(connection_manager, "Connection Manager", "Python", "State machine for connection lifecycle, health monitoring, auto-reconnect")
+    Container(carrier_bypass, "Carrier Bypass Engine", "Bash Scripts", "6-layer stealth system: TTL, IPv6, DNS, OS updates, MSS, traffic shaping")
+    Container(transparent_proxy, "Transparent Proxy", "redsocks + iptables", "Routes all TCP traffic through PdaNet HTTP proxy transparently")
+    Container(config_manager, "Configuration Manager", "Python + JSON", "Settings persistence, connection profiles, desktop integration")
+    Container(stats_collector, "Statistics Collector", "Python", "Bandwidth tracking, ping monitoring, real-time performance metrics")
+    Container(logger, "Logging System", "Python", "Rotating file logs with GUI buffer for troubleshooting")
+}
+
+System_Ext(android_device, "Android Device", "PdaNet+ HTTP Proxy\n192.168.49.1:8000")
+System_Ext(carrier_network, "Carrier Network", "Mobile carrier with detection")
+System_Ext(linux_kernel, "Linux Kernel", "NetworkManager, iptables, sysctl")
+
+Rel(user, gui_app, "Interacts", "GUI")
+Rel(admin, config_manager, "Configures", "CLI/Files")
+Rel(gui_app, connection_manager, "Controls", "Connect/Disconnect")
+Rel(gui_app, stats_collector, "Displays", "Real-time stats")
+Rel(gui_app, logger, "Shows", "Log entries")
+
+Rel(connection_manager, carrier_bypass, "Enables/Disables", "Stealth modes")
+Rel(connection_manager, transparent_proxy, "Manages", "Proxy routing")
+Rel(connection_manager, linux_kernel, "Controls", "Network interfaces")
+
+Rel(carrier_bypass, linux_kernel, "Configures", "iptables rules")
+Rel(transparent_proxy, android_device, "Proxies to", "HTTP CONNECT")
+Rel(transparent_proxy, linux_kernel, "Routes via", "NAT rules")
+
+Rel(stats_collector, linux_kernel, "Reads", "/sys/class/net/")
+Rel(config_manager, linux_kernel, "Manages", ".desktop files")
+
+Rel(android_device, carrier_network, "Connects", "4G/5G + bypass")
+
+Lay_D(user, gui_app)
+Lay_R(gui_app, connection_manager)
+Lay_D(connection_manager, carrier_bypass)
+Lay_L(carrier_bypass, transparent_proxy)
+
+SHOW_LEGEND()
+@enduml

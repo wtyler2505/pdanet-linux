@@ -1,0 +1,348 @@
+"""
+PdaNet Linux - Connection Manager
+State machine, auto-reconnect, and connection orchestration
+"""
+
+import subprocess
+import time
+import threading
+from enum import Enum
+from logger import get_logger
+from stats_collector import get_stats
+from config_manager import get_config
+
+class ConnectionState(Enum):
+    DISCONNECTED = "disconnected"
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    DISCONNECTING = "disconnecting"
+    ERROR = "error"
+
+class ConnectionManager:
+    def __init__(self):
+        self.state = ConnectionState.DISCONNECTED
+        self.logger = get_logger()
+        self.stats = get_stats()
+        self.config = get_config()
+
+        self.current_interface = None
+        self.proxy_available = False
+        self.last_error = None
+
+        # Auto-reconnect state
+        self.auto_reconnect_enabled = False
+        self.reconnect_attempts = 0
+        self.max_reconnect_attempts = 3
+        self.reconnect_delay = 5  # seconds
+        self.reconnect_thread = None
+
+        # Monitoring
+        self.monitor_thread = None
+        self.monitoring_active = False
+
+        # Callbacks
+        self.on_state_change_callbacks = []
+        self.on_error_callbacks = []
+
+    def register_state_change_callback(self, callback):
+        """Register callback for state changes"""
+        self.on_state_change_callbacks.append(callback)
+
+    def register_error_callback(self, callback):
+        """Register callback for errors"""
+        self.on_error_callbacks.append(callback)
+
+    def _notify_state_change(self):
+        """Notify all registered callbacks of state change"""
+        for callback in self.on_state_change_callbacks:
+            try:
+                callback(self.state)
+            except Exception as e:
+                self.logger.error(f"State change callback error: {e}")
+
+    def _notify_error(self, error_message):
+        """Notify all registered callbacks of error"""
+        for callback in self.on_error_callbacks:
+            try:
+                callback(error_message)
+            except Exception as e:
+                self.logger.error(f"Error callback error: {e}")
+
+    def _set_state(self, new_state):
+        """Update connection state and notify"""
+        if self.state != new_state:
+            old_state = self.state
+            self.state = new_state
+            self.logger.info(f"State changed: {old_state.value} -> {new_state.value}")
+            self._notify_state_change()
+
+    def detect_interface(self):
+        """Detect USB tethering interface"""
+        try:
+            result = subprocess.run(
+                ["ip", "link", "show"],
+                capture_output=True,
+                text=True
+            )
+
+            for line in result.stdout.split('\n'):
+                if 'usb' in line.lower() or 'rndis' in line.lower():
+                    # Extract interface name
+                    parts = line.split(':')
+                    if len(parts) >= 2:
+                        iface = parts[1].strip().split('@')[0]
+                        self.current_interface = iface
+                        self.logger.ok(f"Interface detected: {iface}")
+                        return iface
+
+            self.logger.warning("No USB tethering interface detected")
+            return None
+        except Exception as e:
+            self.logger.error(f"Interface detection failed: {e}")
+            return None
+
+    def validate_proxy(self):
+        """Check if PdaNet proxy is accessible"""
+        proxy_ip = self.config.get("proxy_ip", "192.168.49.1")
+        proxy_port = self.config.get("proxy_port", 8000)
+
+        try:
+            # Try to connect through proxy
+            result = subprocess.run(
+                ["curl", "-x", f"http://{proxy_ip}:{proxy_port}",
+                 "--connect-timeout", "5", "-s", "http://www.google.com"],
+                capture_output=True,
+                timeout=10
+            )
+
+            if result.returncode == 0:
+                self.proxy_available = True
+                self.logger.ok(f"Proxy validated: {proxy_ip}:{proxy_port}")
+                return True
+            else:
+                self.proxy_available = False
+                self.logger.error(f"Proxy not accessible: {proxy_ip}:{proxy_port}")
+                return False
+        except Exception as e:
+            self.proxy_available = False
+            self.logger.error(f"Proxy validation failed: {e}")
+            return False
+
+    def connect(self):
+        """Initiate connection"""
+        if self.state == ConnectionState.CONNECTED:
+            self.logger.warning("Already connected")
+            return True
+
+        if self.state == ConnectionState.CONNECTING:
+            self.logger.warning("Connection already in progress")
+            return False
+
+        self._set_state(ConnectionState.CONNECTING)
+        self.logger.info("Initiating connection...")
+
+        # Run in thread to avoid blocking
+        thread = threading.Thread(target=self._connect_thread, daemon=True)
+        thread.start()
+
+        return True
+
+    def _connect_thread(self):
+        """Connection thread (runs in background)"""
+        try:
+            # Step 1: Detect interface
+            interface = self.detect_interface()
+            if not interface:
+                self.last_error = "No USB interface detected"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                return
+
+            # Step 2: Validate proxy
+            if not self.validate_proxy():
+                self.last_error = "Proxy not accessible"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                return
+
+            # Step 3: Run connect script
+            self.logger.info("Running connection script...")
+            result = subprocess.run(
+                ["sudo", "/home/wtyler/pdanet-linux/pdanet-connect"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+
+            if result.returncode == 0:
+                self._set_state(ConnectionState.CONNECTED)
+                self.logger.ok("Connection established")
+
+                # Start statistics tracking
+                self.stats.start_session()
+
+                # Start monitoring
+                self.start_monitoring()
+
+                # Reset reconnect attempts
+                self.reconnect_attempts = 0
+
+            else:
+                self.last_error = f"Connection script failed: {result.stderr}"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                self.logger.error(self.last_error)
+
+        except Exception as e:
+            self.last_error = str(e)
+            self._set_state(ConnectionState.ERROR)
+            self._notify_error(self.last_error)
+            self.logger.error(f"Connection failed: {e}")
+
+    def disconnect(self):
+        """Disconnect from PdaNet"""
+        if self.state == ConnectionState.DISCONNECTED:
+            self.logger.warning("Already disconnected")
+            return True
+
+        self._set_state(ConnectionState.DISCONNECTING)
+        self.logger.info("Disconnecting...")
+
+        # Stop monitoring
+        self.stop_monitoring()
+
+        # Run in thread
+        thread = threading.Thread(target=self._disconnect_thread, daemon=True)
+        thread.start()
+
+        return True
+
+    def _disconnect_thread(self):
+        """Disconnection thread"""
+        try:
+            result = subprocess.run(
+                ["sudo", "/home/wtyler/pdanet-linux/pdanet-disconnect"],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+
+            if result.returncode == 0:
+                self._set_state(ConnectionState.DISCONNECTED)
+                self.logger.ok("Disconnected successfully")
+
+                # Stop statistics
+                self.stats.stop_session()
+
+            else:
+                self.last_error = f"Disconnect script failed: {result.stderr}"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                self.logger.error(self.last_error)
+
+        except Exception as e:
+            self.last_error = str(e)
+            self._set_state(ConnectionState.ERROR)
+            self._notify_error(self.last_error)
+            self.logger.error(f"Disconnection failed: {e}")
+
+    def start_monitoring(self):
+        """Start connection health monitoring"""
+        if self.monitoring_active:
+            return
+
+        self.monitoring_active = True
+        self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+        self.monitor_thread.start()
+        self.logger.info("Connection monitoring started")
+
+    def stop_monitoring(self):
+        """Stop connection health monitoring"""
+        self.monitoring_active = False
+        if self.monitor_thread:
+            self.monitor_thread = None
+        self.logger.info("Connection monitoring stopped")
+
+    def _monitor_loop(self):
+        """Monitor connection health"""
+        while self.monitoring_active and self.state == ConnectionState.CONNECTED:
+            try:
+                # Update bandwidth statistics
+                if self.current_interface:
+                    self.stats.update_bandwidth(self.current_interface)
+
+                # Check if interface still exists
+                interface = self.detect_interface()
+                if not interface:
+                    self.logger.warning("Interface lost")
+                    if self.auto_reconnect_enabled:
+                        self._handle_disconnect_and_reconnect()
+                    else:
+                        self._set_state(ConnectionState.DISCONNECTED)
+                    break
+
+                time.sleep(1)  # Check every second
+
+            except Exception as e:
+                self.logger.error(f"Monitoring error: {e}")
+                time.sleep(5)
+
+    def enable_auto_reconnect(self, enabled=True):
+        """Enable or disable auto-reconnect"""
+        self.auto_reconnect_enabled = enabled
+        if enabled:
+            self.max_reconnect_attempts = self.config.get("reconnect_attempts", 3)
+            self.reconnect_delay = self.config.get("reconnect_delay", 5)
+            self.logger.info(f"Auto-reconnect enabled (max {self.max_reconnect_attempts} attempts)")
+        else:
+            self.logger.info("Auto-reconnect disabled")
+
+    def _handle_disconnect_and_reconnect(self):
+        """Handle unexpected disconnect and attempt reconnection"""
+        if not self.auto_reconnect_enabled:
+            return
+
+        if self.reconnect_attempts >= self.max_reconnect_attempts:
+            self.logger.error(f"Max reconnect attempts ({self.max_reconnect_attempts}) reached")
+            self._set_state(ConnectionState.ERROR)
+            return
+
+        self.reconnect_attempts += 1
+
+        # Exponential backoff
+        delay = self.reconnect_delay * (2 ** (self.reconnect_attempts - 1))
+        delay = min(delay, 60)  # Cap at 60 seconds
+
+        self.logger.warning(f"Reconnect attempt {self.reconnect_attempts}/{self.max_reconnect_attempts} in {delay}s")
+
+        time.sleep(delay)
+        self.connect()
+
+    def get_state(self):
+        """Get current connection state"""
+        return self.state
+
+    def is_connected(self):
+        """Check if currently connected"""
+        return self.state == ConnectionState.CONNECTED
+
+    def get_status_info(self):
+        """Get detailed status information"""
+        return {
+            "state": self.state.value,
+            "interface": self.current_interface,
+            "proxy_available": self.proxy_available,
+            "auto_reconnect": self.auto_reconnect_enabled,
+            "reconnect_attempts": self.reconnect_attempts,
+            "last_error": self.last_error
+        }
+
+# Global connection manager instance
+_connection_instance = None
+
+def get_connection_manager():
+    """Get or create global connection manager instance"""
+    global _connection_instance
+    if _connection_instance is None:
+        _connection_instance = ConnectionManager()
+    return _connection_instance

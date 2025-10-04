@@ -1,0 +1,32 @@
+@startuml PdaNet_Linux_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title PdaNet Linux - System Context Diagram
+
+Person(user, "Linux User", "Desktop/laptop user needing internet connectivity via Android device")
+Person(admin, "System Administrator", "Manages PdaNet Linux installation and network configuration")
+
+System(pdanet_linux, "PdaNet Linux", "Reverse-engineered Linux client for PdaNet+ tethering with carrier detection bypass")
+
+System_Ext(android_device, "Android Device", "Android phone/tablet running PdaNet+ app providing HTTP proxy server")
+System_Ext(carrier_network, "Carrier Network", "Mobile carrier network (Verizon, AT&T, T-Mobile, etc.) with tethering detection")
+System_Ext(internet, "Internet", "External websites and services accessed through tethered connection")
+System_Ext(linux_os, "Linux Operating System", "Ubuntu/Mint providing network interfaces, iptables, and system services")
+
+Rel(user, pdanet_linux, "Uses", "GUI/CLI")
+Rel(admin, pdanet_linux, "Configures", "CLI/Config files")
+Rel(pdanet_linux, android_device, "Connects to", "USB/WiFi")
+Rel(pdanet_linux, linux_os, "Controls", "iptables, NetworkManager")
+Rel(android_device, carrier_network, "Connects to", "4G/5G")
+Rel(carrier_network, internet, "Routes traffic")
+Rel(pdanet_linux, internet, "Accesses", "HTTP/HTTPS via proxy", "Stealth bypass")
+
+Lay_D(user, pdanet_linux)
+Lay_R(pdanet_linux, android_device)
+Lay_U(android_device, carrier_network)
+Lay_R(carrier_network, internet)
+
+SHOW_LEGEND()
+@enduml
