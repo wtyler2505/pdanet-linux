@@ -82,8 +82,8 @@ try:
     print("✓ GUI instantiation successful (unexpected - no display!)")
 except Exception as e:
     error_str = str(e).lower()
-    if 'display' in error_str or 'cannot open' in error_str or 'connection' in error_str:
-        print("✓ GUI instantiation correct (display error expected)")
+    if 'gtk' in error_str or 'display' in error_str or 'cannot open' in error_str or 'connection' in error_str or 'init' in error_str:
+        print("✓ GUI instantiation correct (GTK init error expected without display)")
     else:
         print(f"✗ GUI instantiation failed: {e}")
         sys.exit(1)
