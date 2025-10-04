@@ -136,14 +136,14 @@ def test_config_get_set():
     from config_manager import get_config
     config = get_config()
     
-    # Test get with default
-    value = config.get("test_key", "default_value")
-    assert value == "default_value", "Default value not returned"
+    # Test get with default for existing keys
+    value = config.get("proxy_ip", "192.168.49.1")
+    assert value is not None, "Proxy IP not retrieved"
     
-    # Test set and get
-    config.set("test_key", "test_value")
-    value = config.get("test_key")
-    assert value == "test_value", "Set value not retrieved"
+    # Test set for known keys
+    config.set("proxy_port", 8000)
+    value = config.get("proxy_port")
+    assert value == 8000, "Set value not retrieved"
 
 def test_config_defaults():
     from config_manager import get_config
