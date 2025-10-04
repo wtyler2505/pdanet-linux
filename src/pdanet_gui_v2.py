@@ -424,6 +424,11 @@ class PdaNetGUI(Gtk.Window):
 
     def setup_indicator(self):
         """Setup system tray indicator"""
+        if not HAS_APPINDICATOR:
+            self.logger.warning("AppIndicator3 not available - system tray disabled")
+            self.indicator = None
+            return
+
         self.indicator = AppIndicator3.Indicator.new(
             "pdanet-linux",
             "network-wireless-disconnected",
