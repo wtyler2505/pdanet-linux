@@ -559,10 +559,90 @@ class PdaNetGUI(Gtk.Window):
 
     def on_connect_clicked(self, button):
         """Handle connect button"""
-        self.connect_button.set_sensitive(False)
-        self.disconnect_button.set_sensitive(False)
-        self.connection.connect()
-        GLib.timeout_add(2000, self.update_button_states)
+        mode = self.mode_combo.get_active_id()
+        
+        # For iPhone and WiFi modes, show dialog to get SSID/password
+        if mode in ["iphone", "wifi"]:
+            ssid, password = self.show_wifi_credentials_dialog(mode)
+            if not ssid:
+                return  # User cancelled
+            
+            self.connect_button.set_sensitive(False)
+            self.disconnect_button.set_sensitive(False)
+            self.connection.connect(mode=mode, ssid=ssid, password=password)
+            GLib.timeout_add(2000, self.update_button_states)
+        else:
+            # USB mode - no credentials needed
+            self.connect_button.set_sensitive(False)
+            self.disconnect_button.set_sensitive(False)
+            self.connection.connect(mode=mode)
+            GLib.timeout_add(2000, self.update_button_states)
+
+    def show_wifi_credentials_dialog(self, mode):
+        """Show dialog to get WiFi/iPhone credentials"""
+        dialog = Gtk.Dialog(title=f"{mode.upper()} Connection",
+                           transient_for=self,
+                           flags=0)
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OK, Gtk.ResponseType.OK
+        )
+
+        box = dialog.get_content_area()
+        box.set_spacing(10)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+
+        # Info label
+        if mode == "iphone":
+            info_text = "Enter your iPhone Personal Hotspot details:"
+        else:
+            info_text = "Enter Android WiFi Hotspot details:"
+        
+        info_label = Gtk.Label(label=info_text)
+        box.pack_start(info_label, False, False, 0)
+
+        # SSID entry
+        ssid_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        ssid_label = Gtk.Label(label="Network Name (SSID):")
+        ssid_label.set_width_chars(20)
+        ssid_label.set_xalign(0)
+        ssid_entry = Gtk.Entry()
+        ssid_entry.set_placeholder_text("iPhone" if mode == "iphone" else "AndroidAP")
+        ssid_box.pack_start(ssid_label, False, False, 0)
+        ssid_box.pack_start(ssid_entry, True, True, 0)
+        box.pack_start(ssid_box, False, False, 0)
+
+        # Password entry
+        pass_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
+        pass_label = Gtk.Label(label="Password:")
+        pass_label.set_width_chars(20)
+        pass_label.set_xalign(0)
+        pass_entry = Gtk.Entry()
+        pass_entry.set_visibility(False)
+        pass_entry.set_placeholder_text("Optional if open network")
+        pass_box.pack_start(pass_label, False, False, 0)
+        pass_box.pack_start(pass_entry, True, True, 0)
+        box.pack_start(pass_box, False, False, 0)
+
+        # Stealth mode notice for iPhone
+        if mode == "iphone":
+            notice = Gtk.Label()
+            notice.set_markup("<i>Note: Aggressive stealth mode will be automatically enabled\nto bypass carrier throttling detection.</i>")
+            notice.set_line_wrap(True)
+            box.pack_start(notice, False, False, 5)
+
+        dialog.show_all()
+        response = dialog.run()
+        
+        ssid = ssid_entry.get_text() if response == Gtk.ResponseType.OK else None
+        password = pass_entry.get_text() if response == Gtk.ResponseType.OK else None
+        
+        dialog.destroy()
+        
+        return ssid, password
 
     def on_disconnect_clicked(self, button):
         """Handle disconnect button"""
