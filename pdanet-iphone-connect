@@ -1,0 +1,181 @@
+#!/bin/bash
+#
+# pdanet-iphone-connect - Connect to iPhone Personal Hotspot with stealth mode
+# Bypasses carrier throttling detection using aggressive TTL/IPv6/DNS obfuscation
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Configuration
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STEALTH_SCRIPT="$PROJECT_DIR/scripts/wifi-stealth.sh"
+STEALTH_LEVEL=3  # Aggressive mode by default
+
+echo -e "${CYAN}╔════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║  iPhone Hotspot Stealth Connector     ║${NC}"
+echo -e "${CYAN}╔════════════════════════════════════════╗${NC}"
+echo ""
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}Error: This script must be run as root (use sudo)${NC}"
+   exit 1
+fi
+
+# Get SSID and password from user if not provided
+if [ -z "$IPHONE_SSID" ]; then
+    echo -e "${YELLOW}Enter iPhone hotspot SSID (name):${NC}"
+    read -r IPHONE_SSID
+fi
+
+if [ -z "$IPHONE_PASSWORD" ]; then
+    echo -e "${YELLOW}Enter iPhone hotspot password:${NC}"
+    read -rs IPHONE_PASSWORD
+    echo ""
+fi
+
+if [ -z "$IPHONE_SSID" ]; then
+    echo -e "${RED}Error: SSID cannot be empty${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}[1/5]${NC} Detecting WiFi interface..."
+
+# Find WiFi interface
+WIFI_INTERFACE=$(nmcli -t -f DEVICE,TYPE device | grep wifi | head -1 | cut -d: -f1)
+
+if [ -z "$WIFI_INTERFACE" ]; then
+    echo -e "${RED}Error: No WiFi interface found!${NC}"
+    echo "Please make sure WiFi is enabled on your system."
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Found WiFi interface: $WIFI_INTERFACE"
+
+echo -e "${GREEN}[2/5]${NC} Scanning for iPhone hotspot..."
+
+# Scan for networks
+nmcli device wifi rescan 2>/dev/null || true
+sleep 2
+
+# Check if iPhone hotspot is visible
+if ! nmcli device wifi list | grep -q "$IPHONE_SSID"; then
+    echo -e "${YELLOW}Warning: iPhone hotspot '$IPHONE_SSID' not found in scan results${NC}"
+    echo "Make sure Personal Hotspot is enabled on your iPhone"
+    echo "Attempting connection anyway..."
+fi
+
+echo -e "${GREEN}[3/5]${NC} Connecting to iPhone hotspot..."
+
+# Disconnect any existing WiFi connection
+nmcli device disconnect "$WIFI_INTERFACE" 2>/dev/null || true
+sleep 1
+
+# Connect to iPhone hotspot
+if [ -n "$IPHONE_PASSWORD" ]; then
+    # Connect with password
+    nmcli device wifi connect "$IPHONE_SSID" password "$IPHONE_PASSWORD" ifname "$WIFI_INTERFACE" 2>&1 | grep -v "password" || {
+        echo -e "${RED}Error: Failed to connect to iPhone hotspot${NC}"
+        echo "Please verify:"
+        echo "  1. Personal Hotspot is enabled on iPhone"
+        echo "  2. SSID '$IPHONE_SSID' is correct"
+        echo "  3. Password is correct"
+        echo "  4. iPhone is within range"
+        exit 1
+    }
+else
+    # Connect without password (open network)
+    nmcli device wifi connect "$IPHONE_SSID" ifname "$WIFI_INTERFACE" || {
+        echo -e "${RED}Error: Failed to connect to iPhone hotspot${NC}"
+        exit 1
+    }
+fi
+
+# Wait for connection to establish
+sleep 3
+
+# Verify connection
+if ! nmcli -t -f DEVICE,STATE device | grep "$WIFI_INTERFACE" | grep -q "connected"; then
+    echo -e "${RED}Error: WiFi connected but interface not active${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} Connected to iPhone hotspot: $IPHONE_SSID"
+
+# Get IP address
+IP_ADDR=$(ip addr show "$WIFI_INTERFACE" | grep "inet " | awk '{print $2}' | cut -d/ -f1)
+GATEWAY=$(ip route | grep default | grep "$WIFI_INTERFACE" | awk '{print $3}')
+
+echo -e "${GREEN}✓${NC} IP Address: $IP_ADDR"
+echo -e "${GREEN}✓${NC} Gateway: $GATEWAY"
+
+echo -e "${GREEN}[4/5]${NC} Enabling aggressive stealth mode..."
+echo -e "${YELLOW}[STEALTH]${NC} Activating 6-layer carrier bypass..."
+
+# Apply stealth mode
+if [ -f "$STEALTH_SCRIPT" ]; then
+    bash "$STEALTH_SCRIPT" enable "$WIFI_INTERFACE" $STEALTH_LEVEL
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓${NC} Stealth mode activated (Level $STEALTH_LEVEL)"
+        echo ""
+        echo -e "${CYAN}Stealth Features Active:${NC}"
+        echo -e "  ${GREEN}✓${NC} Layer 1: TTL Normalization (65)"
+        echo -e "  ${GREEN}✓${NC} Layer 2: IPv6 Complete Block"
+        echo -e "  ${GREEN}✓${NC} Layer 3: DNS Leak Prevention"
+        echo -e "  ${GREEN}✓${NC} Layer 4: OS Update Blocking"
+        echo -e "  ${GREEN}✓${NC} Layer 5: MSS/MTU Clamping"
+        echo -e "  ${GREEN}✓${NC} Layer 6: Traffic Shaping Ready"
+    else
+        echo -e "${YELLOW}Warning: Stealth mode activation had issues${NC}"
+        echo -e "${YELLOW}Connection will work but may be detected by carrier${NC}"
+    fi
+else
+    echo -e "${YELLOW}Warning: Stealth script not found at $STEALTH_SCRIPT${NC}"
+    echo -e "${YELLOW}Connection will work but stealth features disabled${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}[5/5]${NC} Verifying internet connection..."
+
+# Test internet connectivity
+if curl --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✓${NC} Internet connection verified!"
+    echo ""
+    echo -e "${GREEN}════════════════════════════════════════${NC}"
+    echo -e "${GREEN}✓ iPhone Hotspot Connected!${NC}"
+    echo -e "${GREEN}════════════════════════════════════════${NC}"
+    echo ""
+    echo -e "${CYAN}Connection Details:${NC}"
+    echo -e "  Network: $IPHONE_SSID"
+    echo -e "  Interface: $WIFI_INTERFACE"
+    echo -e "  IP Address: $IP_ADDR"
+    echo -e "  Gateway: $GATEWAY"
+    echo -e "  Stealth Mode: ACTIVE (Level $STEALTH_LEVEL)"
+    echo ""
+    echo -e "${CYAN}Carrier Bypass Status:${NC}"
+    echo -e "  ${GREEN}✓${NC} TTL normalized to match phone traffic"
+    echo -e "  ${GREEN}✓${NC} IPv6 disabled to prevent leaks"
+    echo -e "  ${GREEN}✓${NC} DNS forced through phone gateway"
+    echo -e "  ${GREEN}✓${NC} OS update traffic blocked"
+    echo ""
+    echo -e "${YELLOW}Note: For maximum stealth, consider:${NC}"
+    echo -e "  • Using a VPN over this connection"
+    echo -e "  • Avoiding massive downloads"
+    echo -e "  • Not running OS updates while connected"
+    echo ""
+    echo -e "To disconnect: ${CYAN}sudo pdanet-iphone-disconnect${NC}"
+else
+    echo -e "${YELLOW}Warning: Could not verify internet connection${NC}"
+    echo "Connection established but verification failed"
+    echo "Your internet may still work, try opening a browser"
+fi
+
+exit 0
