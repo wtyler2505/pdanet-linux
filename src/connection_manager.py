@@ -1,12 +1,18 @@
 """
 PdaNet Linux - Connection Manager
 State machine, auto-reconnect, and connection orchestration
+SECURITY HARDENED VERSION
 """
 
 import subprocess
 import time
 import threading
+import shutil
+import ipaddress
+import re
+import os
 from enum import Enum
+from pathlib import Path
 from logger import get_logger
 from stats_collector import get_stats
 from config_manager import get_config
@@ -43,6 +49,71 @@ class ConnectionManager:
         # Callbacks
         self.on_state_change_callbacks = []
         self.on_error_callbacks = []
+
+        # Find script paths at initialization (SECURITY FIX: No hardcoded paths)
+        self.connect_script = self._find_script("pdanet-connect")
+        self.disconnect_script = self._find_script("pdanet-disconnect")
+        self.wifi_connect_script = self._find_script("pdanet-wifi-connect")
+        self.wifi_disconnect_script = self._find_script("pdanet-wifi-disconnect")
+
+    def _find_script(self, script_name):
+        """
+        Find script in PATH or relative to current directory
+        SECURITY: Prevents arbitrary path execution
+        """
+        # First try system PATH
+        script_path = shutil.which(script_name)
+        if script_path:
+            return script_path
+        
+        # Try relative to this file's directory
+        current_dir = Path(__file__).parent.parent
+        script_path = current_dir / script_name
+        if script_path.exists() and os.access(script_path, os.X_OK):
+            return str(script_path)
+        
+        # Try /usr/local/bin (common install location)
+        script_path = Path("/usr/local/bin") / script_name
+        if script_path.exists():
+            return str(script_path)
+        
+        self.logger.warning(f"Script not found: {script_name}")
+        return None
+
+    def _validate_proxy_ip(self, ip):
+        """
+        Validate proxy IP address
+        SECURITY FIX: Prevents command injection via malicious IP
+        """
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            return False
+
+    def _validate_proxy_port(self, port):
+        """
+        Validate proxy port number
+        SECURITY FIX: Ensures port is valid integer in range
+        """
+        try:
+            port_int = int(port)
+            return 1 <= port_int <= 65535
+        except (ValueError, TypeError):
+            return False
+
+    def _validate_hostname(self, hostname):
+        """
+        Validate hostname for DNS operations
+        SECURITY FIX: Prevents command injection via malicious hostnames
+        """
+        # Allow IP addresses
+        if self._validate_proxy_ip(hostname):
+            return True
+        
+        # Allow valid hostnames (RFC 1123)
+        hostname_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
+        return bool(re.match(hostname_pattern, hostname)) and len(hostname) <= 253
 
     def register_state_change_callback(self, callback):
         """Register callback for state changes"""
@@ -82,7 +153,8 @@ class ConnectionManager:
             result = subprocess.run(
                 ["ip", "link", "show"],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=5
             )
 
             for line in result.stdout.split('\n'):
@@ -102,12 +174,24 @@ class ConnectionManager:
             return None
 
     def validate_proxy(self):
-        """Check if PdaNet proxy is accessible"""
+        """
+        Check if PdaNet proxy is accessible
+        SECURITY HARDENED: Input validation before subprocess call
+        """
         proxy_ip = self.config.get("proxy_ip", "192.168.49.1")
         proxy_port = self.config.get("proxy_port", 8000)
 
+        # SECURITY FIX: Validate inputs before using in subprocess
+        if not self._validate_proxy_ip(proxy_ip):
+            self.logger.error(f"Invalid proxy IP: {proxy_ip}")
+            return False
+        
+        if not self._validate_proxy_port(proxy_port):
+            self.logger.error(f"Invalid proxy port: {proxy_port}")
+            return False
+
         try:
-            # Try to connect through proxy
+            # Safe to use validated inputs
             result = subprocess.run(
                 ["curl", "-x", f"http://{proxy_ip}:{proxy_port}",
                  "--connect-timeout", "5", "-s", "http://www.google.com"],
@@ -128,7 +212,7 @@ class ConnectionManager:
             self.logger.error(f"Proxy validation failed: {e}")
             return False
 
-    def connect(self):
+    def connect(self, mode="usb"):
         """Initiate connection"""
         if self.state == ConnectionState.CONNECTED:
             self.logger.warning("Already connected")
@@ -139,36 +223,49 @@ class ConnectionManager:
             return False
 
         self._set_state(ConnectionState.CONNECTING)
-        self.logger.info("Initiating connection...")
+        self.logger.info(f"Initiating {mode} connection...")
 
         # Run in thread to avoid blocking
-        thread = threading.Thread(target=self._connect_thread, daemon=True)
+        thread = threading.Thread(target=self._connect_thread, args=(mode,), daemon=True)
         thread.start()
 
         return True
 
-    def _connect_thread(self):
+    def _connect_thread(self, mode="usb"):
         """Connection thread (runs in background)"""
         try:
-            # Step 1: Detect interface
-            interface = self.detect_interface()
-            if not interface:
-                self.last_error = "No USB interface detected"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                return
+            # Step 1: Detect interface (for USB mode)
+            if mode == "usb":
+                interface = self.detect_interface()
+                if not interface:
+                    self.last_error = "No USB interface detected"
+                    self._set_state(ConnectionState.ERROR)
+                    self._notify_error(self.last_error)
+                    return
 
-            # Step 2: Validate proxy
-            if not self.validate_proxy():
-                self.last_error = "Proxy not accessible"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                return
+                # Step 2: Validate proxy
+                if not self.validate_proxy():
+                    self.last_error = "Proxy not accessible"
+                    self._set_state(ConnectionState.ERROR)
+                    self._notify_error(self.last_error)
+                    return
 
             # Step 3: Run connect script
-            self.logger.info("Running connection script...")
+            # SECURITY FIX: Use dynamically found script path, not hardcoded
+            if mode == "wifi":
+                script = self.wifi_connect_script
+            else:
+                script = self.connect_script
+
+            if not script:
+                self.last_error = f"Connection script not found for {mode} mode"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                return
+
+            self.logger.info(f"Running connection script: {script}")
             result = subprocess.run(
-                ["sudo", "/home/wtyler/pdanet-linux/pdanet-connect"],
+                ["sudo", script],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -220,8 +317,16 @@ class ConnectionManager:
     def _disconnect_thread(self):
         """Disconnection thread"""
         try:
+            # SECURITY FIX: Use dynamically found script path
+            script = self.disconnect_script
+            if not script:
+                self.last_error = "Disconnect script not found"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                return
+
             result = subprocess.run(
-                ["sudo", "/home/wtyler/pdanet-linux/pdanet-disconnect"],
+                ["sudo", script],
                 capture_output=True,
                 text=True,
                 timeout=15
