@@ -117,9 +117,15 @@ cat > "$SUDOERS_FILE" << EOF
 # Allow user to run pdanet scripts without password
 $REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/pdanet-connect
 $REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/pdanet-disconnect
+$REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/pdanet-wifi-connect
+$REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/pdanet-wifi-disconnect
+$REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/pdanet-iphone-connect
+$REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/pdanet-iphone-disconnect
 $REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/scripts/stealth-mode.sh
+$REAL_USER ALL=(ALL) NOPASSWD: $PROJECT_DIR/scripts/wifi-stealth.sh
 $REAL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active redsocks
 $REAL_USER ALL=(ALL) NOPASSWD: /usr/sbin/iptables -t mangle -L PDANET_STEALTH
+$REAL_USER ALL=(ALL) NOPASSWD: /usr/sbin/iptables -t mangle -L WIFI_STEALTH
 EOF
 
 chmod 440 "$SUDOERS_FILE"
