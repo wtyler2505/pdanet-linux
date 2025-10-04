@@ -672,13 +672,15 @@ class PdaNetGUI(Gtk.Window):
         if state == ConnectionState.CONNECTED:
             self.connect_button.set_sensitive(False)
             self.disconnect_button.set_sensitive(True)
-            self.tray_connect_item.set_label("Disconnect")
-            self.indicator.set_icon("network-wireless-connected")
+            if self.indicator:
+                self.tray_connect_item.set_label("Disconnect")
+                self.indicator.set_icon("network-wireless-connected")
         else:
             self.connect_button.set_sensitive(True)
             self.disconnect_button.set_sensitive(False)
-            self.tray_connect_item.set_label("Connect")
-            self.indicator.set_icon("network-wireless-disconnected")
+            if self.indicator:
+                self.tray_connect_item.set_label("Connect")
+                self.indicator.set_icon("network-wireless-disconnected")
 
         return False
 
