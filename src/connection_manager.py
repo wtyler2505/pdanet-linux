@@ -240,7 +240,7 @@ class ConnectionManager:
 
         return True
 
-    def _connect_thread(self, mode="usb"):
+    def _connect_thread(self, mode="usb", ssid=None, password=None):
         """Connection thread (runs in background)"""
         try:
             # Step 1: Detect interface (for USB mode)
@@ -259,10 +259,19 @@ class ConnectionManager:
                     self._notify_error(self.last_error)
                     return
 
+            # Step 2b: For iPhone/WiFi mode, validate SSID
+            if mode in ["iphone", "wifi"] and not ssid:
+                self.last_error = f"SSID required for {mode} mode"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                return
+
             # Step 3: Run connect script
             # SECURITY FIX: Use dynamically found script path, not hardcoded
             if mode == "wifi":
                 script = self.wifi_connect_script
+            elif mode == "iphone":
+                script = self.iphone_connect_script
             else:
                 script = self.connect_script
 
@@ -273,16 +282,29 @@ class ConnectionManager:
                 return
 
             self.logger.info(f"Running connection script: {script}")
+            
+            # Prepare environment variables for WiFi/iPhone connections
+            env = os.environ.copy()
+            if mode in ["iphone", "wifi"]:
+                if ssid:
+                    env["IPHONE_SSID"] = ssid
+                if password:
+                    env["IPHONE_PASSWORD"] = password
+
             result = subprocess.run(
                 ["sudo", script],
                 capture_output=True,
                 text=True,
-                timeout=30
+                timeout=60,  # Longer timeout for WiFi connections
+                env=env
             )
 
             if result.returncode == 0:
                 self._set_state(ConnectionState.CONNECTED)
                 self.logger.ok("Connection established")
+
+                # Store connection mode for later
+                self.current_mode = mode
 
                 # Start statistics tracking
                 self.stats.start_session()
