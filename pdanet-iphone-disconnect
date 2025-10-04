@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# pdanet-iphone-disconnect - Disconnect from iPhone Personal Hotspot
+# Cleans up stealth mode and disconnects WiFi
+#
+
+set -e
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STEALTH_SCRIPT="$PROJECT_DIR/scripts/wifi-stealth.sh"
+
+echo -e "${CYAN}iPhone Hotspot Disconnect${NC}"
+echo "======================================"
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}Error: This script must be run as root (use sudo)${NC}"
+   exit 1
+fi
+
+echo -e "${YELLOW}[1/3]${NC} Finding WiFi interface..."
+
+# Find WiFi interface
+WIFI_INTERFACE=$(nmcli -t -f DEVICE,TYPE device | grep wifi | head -1 | cut -d: -f1)
+
+if [ -z "$WIFI_INTERFACE" ]; then
+    echo -e "${RED}Error: No WiFi interface found${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓${NC} WiFi interface: $WIFI_INTERFACE"
+
+echo -e "${YELLOW}[2/3]${NC} Disabling stealth mode..."
+
+# Disable stealth mode
+if [ -f "$STEALTH_SCRIPT" ]; then
+    bash "$STEALTH_SCRIPT" disable "$WIFI_INTERFACE"
+    echo -e "${GREEN}✓${NC} Stealth mode disabled"
+else
+    echo -e "${YELLOW}Warning: Stealth script not found${NC}"
+fi
+
+echo -e "${YELLOW}[3/3]${NC} Disconnecting from iPhone hotspot..."
+
+# Disconnect WiFi
+nmcli device disconnect "$WIFI_INTERFACE" 2>/dev/null || true
+
+echo -e "${GREEN}✓${NC} Disconnected from iPhone hotspot"
+echo ""
+echo -e "${GREEN}════════════════════════════════════════${NC}"
+echo -e "${GREEN}Disconnection complete!${NC}"
+echo -e "${GREEN}════════════════════════════════════════${NC}"
+
+exit 0
