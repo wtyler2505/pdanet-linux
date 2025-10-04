@@ -1,14 +1,52 @@
 """
 PdaNet Linux - Configuration Manager
 Handles settings, profiles, and persistent state
+SECURITY HARDENED VERSION
 """
 
 import json
 import os
+import ipaddress
 from pathlib import Path
 from datetime import datetime
 
 class ConfigManager:
+    # SECURITY FIX: Define allowed configuration keys and their types
+    ALLOWED_CONFIG_KEYS = {
+        "auto_start": bool,
+        "start_minimized": bool,
+        "auto_reconnect": bool,
+        "reconnect_attempts": int,
+        "reconnect_delay": int,
+        "stealth_mode": bool,
+        "stealth_level": int,
+        "proxy_ip": str,
+        "proxy_port": int,
+        "connection_timeout": int,
+        "status_update_interval": int,
+        "enable_notifications": bool,
+        "enable_logging": bool,
+        "log_level": str,
+        "theme": str,
+        "window_width": int,
+        "window_height": int,
+        "single_instance": bool
+    }
+
+    # SECURITY FIX: Define value constraints
+    VALUE_CONSTRAINTS = {
+        "stealth_level": (1, 3),  # min, max
+        "proxy_port": (1, 65535),
+        "reconnect_attempts": (1, 10),
+        "reconnect_delay": (1, 300),
+        "connection_timeout": (5, 300),
+        "status_update_interval": (100, 10000),
+        "window_width": (400, 3840),
+        "window_height": (300, 2160),
+        "log_level": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        "theme": ["dark", "light"]
+    }
+
     def __init__(self, config_dir=None):
         if config_dir is None:
             config_dir = Path.home() / ".config" / "pdanet-linux"
@@ -49,6 +87,47 @@ class ConfigManager:
         self.profiles = self.load_profiles()
         self.state = self.load_state()
 
+    def _validate_proxy_ip(self, ip):
+        """Validate IP address"""
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            return False
+
+    def _validate_config_value(self, key, value):
+        """
+        Validate configuration key and value
+        SECURITY FIX: Prevents configuration injection attacks
+        """
+        # Check if key is allowed
+        if key not in self.ALLOWED_CONFIG_KEYS:
+            raise ValueError(f"Invalid configuration key: {key}")
+
+        # Check type
+        expected_type = self.ALLOWED_CONFIG_KEYS[key]
+        if not isinstance(value, expected_type):
+            raise TypeError(f"Invalid type for {key}: expected {expected_type.__name__}, got {type(value).__name__}")
+
+        # Check constraints
+        if key in self.VALUE_CONSTRAINTS:
+            constraint = self.VALUE_CONSTRAINTS[key]
+            
+            if isinstance(constraint, tuple):  # Range constraint
+                min_val, max_val = constraint
+                if not (min_val <= value <= max_val):
+                    raise ValueError(f"{key} must be between {min_val} and {max_val}")
+            
+            elif isinstance(constraint, list):  # Enum constraint
+                if value not in constraint:
+                    raise ValueError(f"{key} must be one of {constraint}")
+
+        # Special validation for proxy_ip
+        if key == "proxy_ip" and not self._validate_proxy_ip(value):
+            raise ValueError(f"Invalid IP address: {value}")
+
+        return True
+
     def load_config(self):
         """Load configuration from file or create defaults"""
         if self.config_file.exists():
@@ -56,10 +135,19 @@ class ConfigManager:
                 with open(self.config_file, 'r') as f:
                     config = json.load(f)
                     # Merge with defaults (add any new keys)
+                    validated_config = {}
                     for key, value in self.defaults.items():
-                        if key not in config:
-                            config[key] = value
-                    return config
+                        if key in config:
+                            try:
+                                # Validate loaded values
+                                self._validate_config_value(key, config[key])
+                                validated_config[key] = config[key]
+                            except (ValueError, TypeError) as e:
+                                print(f"Invalid config value for {key}: {e}, using default")
+                                validated_config[key] = value
+                        else:
+                            validated_config[key] = value
+                    return validated_config
             except Exception as e:
                 print(f"Error loading config: {e}")
                 return self.defaults.copy()
@@ -81,7 +169,11 @@ class ConfigManager:
         return self.config.get(key, default)
 
     def set(self, key, value):
-        """Set configuration value and save"""
+        """
+        Set configuration value and save
+        SECURITY FIX: Validates all inputs before saving
+        """
+        self._validate_config_value(key, value)
         self.config[key] = value
         self.save_config()
 
@@ -114,6 +206,11 @@ class ConfigManager:
 
     def add_profile(self, name, settings):
         """Add or update a connection profile"""
+        # Validate profile settings
+        for key, value in settings.items():
+            if key in self.ALLOWED_CONFIG_KEYS:
+                self._validate_config_value(key, value)
+        
         self.profiles[name] = {
             "created": datetime.now().isoformat(),
             "settings": settings
@@ -183,7 +280,7 @@ Version=1.0
 Type=Application
 Name=PdaNet Linux
 Comment=PdaNet USB Tethering
-Exec=/usr/local/bin/pdanet-gui --start-minimized
+Exec=/usr/local/bin/pdanet-gui-v2 --start-minimized
 Icon=network-wireless
 Terminal=false
 Categories=Network;
