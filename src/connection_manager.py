@@ -55,6 +55,8 @@ class ConnectionManager:
         self.disconnect_script = self._find_script("pdanet-disconnect")
         self.wifi_connect_script = self._find_script("pdanet-wifi-connect")
         self.wifi_disconnect_script = self._find_script("pdanet-wifi-disconnect")
+        self.iphone_connect_script = self._find_script("pdanet-iphone-connect")
+        self.iphone_disconnect_script = self._find_script("pdanet-iphone-disconnect")
 
     def _find_script(self, script_name):
         """
