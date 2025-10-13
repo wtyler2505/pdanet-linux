@@ -6,6 +6,7 @@ SECURITY: Ensure validators prevent injection attacks
 import pytest
 from src.input_validators import (
     ValidationError,
+    SHELL_UNSAFE_CHARS,
     validate_ssid,
     validate_password,
     validate_ip_address,
