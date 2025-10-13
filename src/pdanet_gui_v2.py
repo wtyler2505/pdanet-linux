@@ -992,6 +992,114 @@ class PdaNetGUI(Gtk.Window):
         # Update status panel
         if state == ConnectionState.CONNECTED:
             self.status_state_label.get_children()[1].set_markup(
+    def update_tray_status(self):
+        """Update system tray menu with current status information"""
+        if not self.indicator:
+            return
+        
+        try:
+            # Get current state
+            state = self.connection.get_state()
+            is_connected = state == ConnectionState.CONNECTED
+            
+            # Update connection status
+            if hasattr(self, 'tray_status_item'):
+                if state == ConnectionState.CONNECTED:
+                    self.tray_status_item.set_label("Status: Connected")
+                elif state == ConnectionState.CONNECTING:
+                    self.tray_status_item.set_label("Status: Connecting...")
+                elif state == ConnectionState.DISCONNECTING:
+                    self.tray_status_item.set_label("Status: Disconnecting...")
+                elif state == ConnectionState.ERROR:
+                    self.tray_status_item.set_label("Status: Error")
+                else:
+                    self.tray_status_item.set_label("Status: Disconnected")
+            
+            # Update stealth status
+            if hasattr(self, 'tray_stealth_item'):
+                stealth_status = self.connection.get_stealth_status_string()
+                self.tray_stealth_item.set_label(f"Stealth: {stealth_status}")
+            
+            # Update interface status
+            if hasattr(self, 'tray_interface_item'):
+                interface = self.connection.current_interface or "Not Detected"
+                mode = self.connection.current_mode or "None"
+                self.tray_interface_item.set_label(f"Interface: {interface} ({mode.upper()})")
+            
+            # Update stats
+            if hasattr(self, 'tray_stats_item') and is_connected:
+                dl_rate = self.stats.get_current_download_rate()
+                ul_rate = self.stats.get_current_upload_rate()
+                self.tray_stats_item.set_label(
+                    f"Stats: {Format.format_bandwidth(dl_rate)} ↓  {Format.format_bandwidth(ul_rate)} ↑"
+                )
+            elif hasattr(self, 'tray_stats_item'):
+                self.tray_stats_item.set_label("Stats: 0.0 KB/s ↓  0.0 KB/s ↑")
+            
+            # Update connect/disconnect button states
+            if hasattr(self, 'tray_connect_item'):
+                if is_connected:
+                    self.tray_connect_item.set_label("Disconnect")
+                    self.tray_connect_item.set_sensitive(True)
+                else:
+                    self.tray_connect_item.set_label("Connect")
+                    self.tray_connect_item.set_sensitive(True)
+            
+            # Update icon
+            if is_connected:
+                self.indicator.set_icon("network-wireless-connected")
+            else:
+                self.indicator.set_icon("network-wireless-disconnected")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to update tray status: {e}")
+    
+    def set_connection_mode(self, mode):
+        """Set connection mode from system tray"""
+        try:
+            if hasattr(self, 'mode_combo'):
+                mode_map = {"usb": 0, "wifi": 1, "iphone": 2}
+                if mode in mode_map:
+                    self.mode_combo.set_active(mode_map[mode])
+                    self.logger.info(f"Connection mode set to {mode.upper()} via system tray")
+            
+            # Update radio button states
+            if mode == "usb" and hasattr(self, 'tray_usb_item'):
+                self.tray_usb_item.set_active(True)
+            elif mode == "wifi" and hasattr(self, 'tray_wifi_item'):
+                self.tray_wifi_item.set_active(True)
+            elif mode == "iphone" and hasattr(self, 'tray_iphone_item'):
+                self.tray_iphone_item.set_active(True)
+                
+        except Exception as e:
+            self.logger.error(f"Failed to set connection mode: {e}")
+    
+    def on_tray_auto_reconnect_toggled(self, widget):
+        """Handle auto-reconnect toggle from system tray"""
+        try:
+            enabled = widget.get_active()
+            self.connection.enable_auto_reconnect(enabled)
+            
+            # Update main GUI toggle if it exists
+            if hasattr(self, 'reconnect_switch'):
+                self.reconnect_switch.set_active(enabled)
+                
+            self.logger.info(f"Auto-reconnect {'enabled' if enabled else 'disabled'} via system tray")
+        except Exception as e:
+            self.logger.error(f"Failed to toggle auto-reconnect: {e}")
+    
+    def show_about_dialog(self, widget):
+        """Show about dialog from system tray"""
+        dialog = Gtk.AboutDialog()
+        dialog.set_transient_for(self)
+        dialog.set_program_name("PdaNet Linux")
+        dialog.set_version("2.0")
+        dialog.set_comments("Advanced network tethering solution with carrier bypass")
+        dialog.set_website("https://github.com/pdanet-linux/pdanet-linux")
+        dialog.set_logo_icon_name("network-wireless")
+        
+        dialog.run()
+        dialog.destroy()
                 f"<span foreground='{Colors.GREEN}'>● ACTIVE</span>"
             )
             self.header_status_label.set_markup(
