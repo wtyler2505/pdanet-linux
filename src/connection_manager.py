@@ -452,6 +452,7 @@ class ConnectionManager:
     def connect(self, mode="usb", ssid=None, password=None):
         """
         Initiate connection
+        Issue #266, #P1-FUNC-7: Use ThreadPoolExecutor for bounded threading
 
         Args:
             mode: Connection mode - "usb", "wifi", or "iphone"
@@ -470,11 +471,11 @@ class ConnectionManager:
         self.current_mode = mode  # Store mode for interface detection
         self.logger.info(f"Initiating {mode} connection...")
 
-        # Run in thread to avoid blocking
-        thread = threading.Thread(
-            target=self._connect_thread, args=(mode, ssid, password), daemon=True
-        )
-        thread.start()
+        # Submit to thread pool instead of creating daemon thread
+        future = self.executor.submit(self._connect_thread, mode, ssid, password)
+        self.active_futures.add(future)
+        # Clean up completed futures
+        future.add_done_callback(lambda f: self.active_futures.discard(f))
 
         return True
 
