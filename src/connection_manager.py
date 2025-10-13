@@ -72,14 +72,78 @@ class ConnectionManager:
         self.iphone_disconnect_script = self._find_script("pdanet-iphone-disconnect")
 
     def _run_privileged(self, argv, timeout=60):
-        """Run a privileged command using PolicyKit (pkexec)."""
+        """
+        Run a privileged command using PolicyKit (pkexec).
+        SECURITY FIX: Audit Issue #55, #293
+        - Requires pkexec (PolicyKit) for privilege escalation
+        - Fails explicitly if pkexec is unavailable
+        - No silent sudo fallback to avoid inconsistent security model
+        """
+        # Validate arguments before execution
         try:
-            cmd = ["pkexec"] + argv
-            return subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout)
-        except FileNotFoundError:
-            # Fallback to sudo if pkexec is unavailable
-            cmd = ["sudo"] + argv
-            return subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=timeout)
+            validate_subprocess_args(argv)
+        except ValidationError as e:
+            self.logger.error(f"Invalid subprocess arguments: {e}")
+            # Return a failed result instead of raising
+            class FailedResult:
+                returncode = 1
+                stdout = ""
+                stderr = f"Argument validation failed: {e}"
+            return FailedResult()
+        
+        # Check if pkexec is available
+        pkexec_path = shutil.which("pkexec")
+        if not pkexec_path:
+            error_msg = (
+                "PolicyKit (pkexec) is not available. "
+                "Please install it: sudo apt-get install policykit-1"
+            )
+            self.logger.error(error_msg)
+            
+            # Return a failed result with helpful message
+            class FailedResult:
+                returncode = 127
+                stdout = ""
+                stderr = error_msg
+            return FailedResult()
+        
+        try:
+            cmd = [pkexec_path] + argv
+            result = subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=timeout
+            )
+            
+            # Log privileged operation for audit trail (Issue #300-303)
+            self.logger.info(
+                f"Privileged command executed: {argv[0]} "
+                f"(exit code: {result.returncode})"
+            )
+            
+            return result
+            
+        except subprocess.TimeoutExpired:
+            error_msg = f"Privileged command timed out after {timeout}s: {' '.join(argv)}"
+            self.logger.error(error_msg)
+            
+            class FailedResult:
+                returncode = 124
+                stdout = ""
+                stderr = error_msg
+            return FailedResult()
+            
+        except Exception as e:
+            error_msg = f"Failed to execute privileged command: {e}"
+            self.logger.error(error_msg)
+            
+            class FailedResult:
+                returncode = 1
+                stdout = ""
+                stderr = error_msg
+            return FailedResult()
 
     def _find_script(self, script_name):
         """
