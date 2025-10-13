@@ -18,6 +18,7 @@ from pathlib import Path
 from config_manager import get_config
 from logger import get_logger
 from stats_collector import get_stats
+from nm_client import NMClient
 from input_validators import (
     ValidationError,
     validate_ssid,
