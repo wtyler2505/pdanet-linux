@@ -673,54 +673,8 @@ class ConnectionManager:
         except Exception as e:
             self.logger.error(f"Failed to execute connection script: {e}")
             return False
-            cmd = [script]
-            if mode in ["iphone", "wifi"] and ssid:
-                cmd += [f"SSID={ssid}"]
-                if password:
-                    cmd += [f"PASSWORD={password}"]
 
-            result = self._run_privileged(cmd, timeout=60)
-
-            if result.returncode == 0:
-                # For WiFi/iPhone modes, detect the interface after connection with retry
-                if mode in ["iphone", "wifi"]:
-                    # Retry interface detection up to 5 times (10 seconds total)
-                    interface = None
-                    for attempt in range(5):
-                        time.sleep(2)
-                        interface = self.detect_interface()
-                        if interface:
-                            self.logger.ok(f"WiFi interface detected: {interface}")
-                            break
-                        self.logger.debug(f"Interface detection attempt {attempt + 1}/5 failed")
-
-                    if not interface:
-                        self.logger.warning("WiFi interface detection failed after 5 attempts")
-
-                self._set_state(ConnectionState.CONNECTED)
-                self.logger.ok("Connection established")
-
-                # Start statistics tracking
-                self.stats.start_session()
-
-                # Start monitoring
-                self.start_monitoring()
-
-                # Reset reconnect attempts
-                self.reconnect_attempts = 0
-
-            else:
-                self.last_error = f"Connection script failed: {result.stderr}"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                self.logger.error(self.last_error)
-
-        except Exception as e:
-            self.last_error = str(e)
-            self._set_state(ConnectionState.ERROR)
-            self._notify_error(self.last_error)
-            self.logger.error(f"Connection failed: {e}")
-
+    @timed_operation("disconnection")
     def disconnect(self):
         """Disconnect from PdaNet"""
         if self.state == ConnectionState.DISCONNECTED:
