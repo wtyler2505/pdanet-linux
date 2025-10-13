@@ -238,7 +238,7 @@ class HighPerformanceStatsCollector:
                 
             return rx_bytes, tx_bytes
             
-        except (IOError, ValueError) as e:
+        except (IOError, ValueError):
             # Interface might have disappeared
             return None, None
     
