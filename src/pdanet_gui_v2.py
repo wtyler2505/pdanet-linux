@@ -148,6 +148,9 @@ class PdaNetGUI(Gtk.Window):
         update_interval = self.config.get("update_interval_ms", 1000)
         GLib.timeout_add(update_interval, self.update_display)
 
+        # Setup keyboard shortcuts
+        self.setup_keyboard_shortcuts()
+
         # Load settings
         self.load_settings()
 
@@ -157,6 +160,48 @@ class PdaNetGUI(Gtk.Window):
             self.logger.info("Started minimized to system tray")
         else:
             self.logger.info("GUI initialized")
+
+    def setup_keyboard_shortcuts(self):
+        """Setup keyboard shortcuts for common actions"""
+        accel_group = Gtk.AccelGroup()
+        self.add_accel_group(accel_group)
+        
+        # Ctrl+C: Connect
+        key, mod = Gtk.accelerator_parse("<Control>C")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE, 
+                          lambda *args: self.on_connect_clicked(None))
+        
+        # Ctrl+D: Disconnect
+        key, mod = Gtk.accelerator_parse("<Control>D")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE,
+                          lambda *args: self.on_disconnect_clicked(None))
+        
+        # Ctrl+H: History
+        key, mod = Gtk.accelerator_parse("<Control>H")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE,
+                          lambda *args: self.on_history_clicked(None))
+        
+        # Ctrl+S: Settings
+        key, mod = Gtk.accelerator_parse("<Control>S")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE,
+                          lambda *args: self.on_settings_clicked(None))
+        
+        # Ctrl+T: Speed Test
+        key, mod = Gtk.accelerator_parse("<Control>T")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE,
+                          lambda *args: self.on_speedtest_clicked(None))
+        
+        # Ctrl+Q: Quit
+        key, mod = Gtk.accelerator_parse("<Control>Q")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE,
+                          lambda *args: self.on_quit(None))
+        
+        # F5: Refresh/Update display
+        key, mod = Gtk.accelerator_parse("F5")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE,
+                          lambda *args: self.update_display())
+        
+        self.logger.info("Keyboard shortcuts enabled: Ctrl+C/D/H/S/T/Q, F5")
 
     def setup_notifications(self):
         """Initialize desktop notifications"""
