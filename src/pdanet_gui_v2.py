@@ -613,6 +613,26 @@ class PdaNetGUI(Gtk.Window):
         self.mode_combo.set_active(0)
         panel.pack_start(self.mode_combo, False, False, 0)
 
+        # Quick-switch saved profiles
+        profiles_label = Gtk.Label(label="SAVED PROFILES")
+        profiles_label.get_style_context().add_class("metric-label")
+        profiles_label.set_xalign(0)
+        panel.pack_start(profiles_label, False, False, 2)
+
+        self.profiles_combo = Gtk.ComboBoxText()
+        self.profiles_combo.append("none", "-- Select Profile --")
+        self.profiles_combo.set_active(0)
+        self.profiles_combo.connect("changed", self.on_profile_selected)
+        panel.pack_start(self.profiles_combo, False, False, 0)
+        
+        # Refresh profiles button
+        refresh_profiles_btn = Gtk.Button(label="🔄 Refresh")
+        refresh_profiles_btn.connect("clicked", lambda b: self.load_saved_profiles())
+        panel.pack_start(refresh_profiles_btn, False, False, 0)
+        
+        # Load profiles initially
+        self.load_saved_profiles()
+
         # Connect/Disconnect buttons
         self.connect_button = Gtk.Button(label="▶ CONNECT")
         self.connect_button.get_style_context().add_class("button-connect")
