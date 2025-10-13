@@ -598,9 +598,11 @@ class ConnectionManager:
         # Stop monitoring
         self.stop_monitoring()
 
-        # Run in thread
-        thread = threading.Thread(target=self._disconnect_thread, daemon=True)
-        thread.start()
+        # Submit to thread pool instead of creating daemon thread
+        future = self.executor.submit(self._disconnect_thread)
+        self.active_futures.add(future)
+        # Clean up completed futures
+        future.add_done_callback(lambda f: self.active_futures.discard(f))
 
         return True
 
