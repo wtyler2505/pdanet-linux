@@ -1355,7 +1355,10 @@ class PdaNetGUI(Gtk.Window):
         """Open settings dialog"""
         dialog = Gtk.Dialog(title="Settings", parent=self, flags=Gtk.DialogFlags.MODAL)
         dialog.add_buttons(
-            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.OK
+            "Import", Gtk.ResponseType.APPLY,
+            "Export", Gtk.ResponseType.YES,
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_SAVE, Gtk.ResponseType.OK
         )
         dialog.set_default_size(500, 600)
 
