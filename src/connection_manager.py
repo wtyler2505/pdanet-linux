@@ -660,7 +660,7 @@ class ConnectionManager:
             result = self._run_privileged(cmd, timeout=120, env=env)
             
             if result and result.returncode == 0:
-                self.logger.info(f"Connection script completed successfully")
+                self.logger.info("Connection script completed successfully")
                 return True
             else:
                 error_output = result.stderr if result else "No result returned"
