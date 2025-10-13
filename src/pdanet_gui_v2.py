@@ -158,6 +158,45 @@ class PdaNetGUI(Gtk.Window):
         else:
             self.logger.info("GUI initialized")
 
+    def setup_notifications(self):
+        """Initialize desktop notifications"""
+        if HAS_NOTIFY:
+            try:
+                Notify.init("PDANET LINUX")
+                self.notifications_enabled = True
+                self.logger.info("Desktop notifications enabled")
+            except Exception as e:
+                self.notifications_enabled = False
+                self.logger.warning(f"Failed to initialize notifications: {e}")
+        else:
+            self.notifications_enabled = False
+            self.logger.info("Notify library not available - notifications disabled")
+
+    def show_notification(self, title, message, urgency="normal"):
+        """
+        Show desktop notification
+        
+        Args:
+            title: Notification title
+            message: Notification message
+            urgency: "low", "normal", or "critical"
+        """
+        if not self.notifications_enabled or not self.config.get("show_notifications", True):
+            return
+        
+        try:
+            urgency_map = {
+                "low": Notify.Urgency.LOW,
+                "normal": Notify.Urgency.NORMAL,
+                "critical": Notify.Urgency.CRITICAL
+            }
+            
+            notification = Notify.Notification.new(title, message, "network-wireless")
+            notification.set_urgency(urgency_map.get(urgency, Notify.Urgency.NORMAL))
+            notification.show()
+        except Exception as e:
+            self.logger.warning(f"Failed to show notification: {e}")
+
     def load_theme(self):
         """Load cyberpunk theme"""
         css_provider = Gtk.CssProvider()
