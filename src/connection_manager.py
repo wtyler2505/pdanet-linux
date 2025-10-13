@@ -355,6 +355,21 @@ class ConnectionManager:
     def _connect_thread(self, mode="usb", ssid=None, password=None):
         """Connection thread (runs in background)"""
         try:
+            # Step 0: SECURITY - Validate all inputs before proceeding
+            # Audit Issue #292, #58-59
+            try:
+                if mode in ["iphone", "wifi"]:
+                    if ssid:
+                        validate_ssid(ssid)
+                    if password:
+                        validate_password(password)
+            except ValidationError as e:
+                self.last_error = f"Invalid input: {e}"
+                self._set_state(ConnectionState.ERROR)
+                self._notify_error(self.last_error)
+                self.logger.error(f"Input validation failed: {e}")
+                return
+            
             # Step 1: Detect interface (for USB mode)
             if mode == "usb":
                 interface = self.detect_interface()
