@@ -115,11 +115,66 @@ class PdaNetLogger:
         """Add entry to circular buffer for GUI display"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
         entry = {"timestamp": timestamp, "level": level, "message": message}
+        
+        # Filter by buffer min level
+        level_map = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "OK": logging.INFO,
+            "WARN": logging.WARNING,
+            "ERROR": logging.ERROR,
+            "CRITICAL": logging.CRITICAL,
+        }
+        if level_map.get(level, logging.INFO) < self.buffer_min_level:
+            return  # Skip messages below buffer threshold
+        
         self.log_buffer.append(entry)
 
         # Keep buffer size limited
         if len(self.log_buffer) > self.max_buffer_size:
             self.log_buffer.pop(0)
+
+    def set_log_level(self, level_str):
+        """
+        Set logging level dynamically
+        Issue #131: Apply config log level without restart
+        
+        Args:
+            level_str: Log level string (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        """
+        level_map = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "ERROR": logging.ERROR,
+            "CRITICAL": logging.CRITICAL,
+        }
+        
+        level = level_map.get(level_str.upper(), logging.INFO)
+        
+        # Update console handler
+        if self.console_handler:
+            self.console_handler.setLevel(level)
+        
+        # Update buffer filter level
+        self.buffer_min_level = level
+        
+        self.logger.info(f"Log level set to {level_str.upper()}")
+    
+    def get_log_level(self):
+        """Get current console log level as string"""
+        if not self.console_handler:
+            return "INFO"
+        
+        level = self.console_handler.level
+        level_map = {
+            logging.DEBUG: "DEBUG",
+            logging.INFO: "INFO",
+            logging.WARNING: "WARNING",
+            logging.ERROR: "ERROR",
+            logging.CRITICAL: "CRITICAL",
+        }
+        return level_map.get(level, "INFO")
 
     def get_recent_logs(self, count=100):
         """Get recent log entries for GUI display"""
