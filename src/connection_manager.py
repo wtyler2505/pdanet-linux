@@ -320,6 +320,7 @@ class ConnectionManager:
         self._notify_state_change()
         return True
 
+    @timed_operation("interface_detection")
     def detect_interface(self):
         """Detect active network interface using NetworkManager D-Bus or fallback to nmcli"""
         try:
