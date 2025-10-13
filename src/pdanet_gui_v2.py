@@ -951,6 +951,9 @@ class PdaNetGUI(Gtk.Window):
         # Update log
         self.update_log_display()
 
+        # Update stealth status (P1-FUNC-8: Real-time stealth status display)
+        self.update_stealth_status()
+
         # Statusbar
         state_text = "ACTIVE" if is_connected else "INACTIVE"
         self.sb_status.set_text(f"SYS: {state_text}")
