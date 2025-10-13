@@ -646,6 +646,33 @@ class ConnectionManager:
     def _execute_connection_script(self, script: str, mode: str, ssid: Optional[str], password: Optional[str]) -> bool:
         """Execute connection script with enhanced error handling and timeout"""
         try:
+            # Enhanced script execution with better error handling
+            cmd = [script]
+            
+            # Build environment for script
+            env = {}
+            if mode in ["iphone", "wifi"] and ssid:
+                env["SSID"] = ssid
+                if password:
+                    env["PASSWORD"] = password
+            
+            # Execute with timeout and proper error capture
+            result = self._run_privileged(cmd, timeout=120, env=env)
+            
+            if result and result.returncode == 0:
+                self.logger.info(f"Connection script completed successfully")
+                return True
+            else:
+                error_output = result.stderr if result else "No result returned"
+                self.logger.error(f"Connection script failed: {error_output}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            self.logger.error("Connection script timed out")
+            return False
+        except Exception as e:
+            self.logger.error(f"Failed to execute connection script: {e}")
+            return False
             cmd = [script]
             if mode in ["iphone", "wifi"] and ssid:
                 cmd += [f"SSID={ssid}"]
