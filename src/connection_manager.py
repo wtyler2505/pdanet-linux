@@ -19,6 +19,8 @@ from config_manager import get_config
 from logger import get_logger
 from stats_collector import get_stats
 from nm_client import NMClient
+from performance_optimizer import get_resource_manager, timed_operation, resource_context
+from reliability_manager import get_reliability_manager
 from input_validators import (
     ValidationError,
     validate_ssid,
