@@ -53,7 +53,7 @@ from datetime import datetime
 # Add src directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config_manager import get_config
+from config_manager import CONFIG_DIR, get_config
 from connection_manager import ConnectionState, get_connection_manager
 from logger import get_logger
 from stats_collector import get_stats
