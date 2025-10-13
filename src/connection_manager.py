@@ -550,65 +550,102 @@ class ConnectionManager:
 
         return True
 
+    @timed_operation("connection_establishment")
     def _connect_thread(self, mode="usb", ssid=None, password=None):
-        """Connection thread (runs in background)"""
-        try:
-            # Step 0: SECURITY - Validate all inputs before proceeding
-            # Audit Issue #292, #58-59
+        """Connection thread (runs in background) with enhanced error handling"""
+        with resource_context("connection_thread"):
             try:
-                if mode in ["iphone", "wifi"]:
-                    if ssid:
-                        validate_ssid(ssid)
-                    if password:
-                        validate_password(password)
-            except ValidationError as e:
-                self.last_error = f"Invalid input: {e}"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                self.logger.error(f"Input validation failed: {e}")
-                return
-            
-            # Step 1: Detect interface (for USB mode)
-            if mode == "usb":
-                interface = self.detect_interface()
-                if not interface:
-                    self.last_error = "No USB interface detected"
+                # Step 0: SECURITY - Validate all inputs before proceeding
+                # Audit Issue #292, #58-59
+                try:
+                    if mode in ["iphone", "wifi"]:
+                        if ssid:
+                            validate_ssid(ssid)
+                        if password:
+                            validate_password(password)
+                except ValidationError as e:
+                    error_msg = f"Invalid input: {e}"
+                    self.last_error = error_msg
                     self._set_state(ConnectionState.ERROR)
-                    self._notify_error(self.last_error)
+                    self._notify_error(error_msg)
+                    self.reliability_manager.report_failure("validation_error", error_msg)
+                    self.logger.error(f"Input validation failed: {e}")
+                    return
+                
+                # Step 1: Detect interface (for USB mode)
+                if mode == "usb":
+                    interface = self.detect_interface()
+                    if not interface:
+                        error_msg = "No USB interface detected"
+                        self.last_error = error_msg
+                        self._set_state(ConnectionState.ERROR)
+                        self._notify_error(error_msg)
+                        self.reliability_manager.report_failure("interface_detection", error_msg)
+                        return
+
+                    # Step 2: Validate proxy
+                    if not self.validate_proxy():
+                        error_msg = "Proxy not accessible"
+                        self.last_error = error_msg
+                        self._set_state(ConnectionState.ERROR)
+                        self._notify_error(error_msg)
+                        self.reliability_manager.report_failure("proxy_validation", error_msg, interface)
+                        return
+
+                # Step 2b: For iPhone/WiFi mode, validate SSID
+                if mode in ["iphone", "wifi"] and not ssid:
+                    error_msg = f"SSID required for {mode} mode"
+                    self.last_error = error_msg
+                    self._set_state(ConnectionState.ERROR)
+                    self._notify_error(error_msg)
+                    self.reliability_manager.report_failure("missing_ssid", error_msg)
                     return
 
-                # Step 2: Validate proxy
-                if not self.validate_proxy():
-                    self.last_error = "Proxy not accessible"
+                # Step 3: Run connect script
+                # SECURITY FIX: Use dynamically found script path, not hardcoded
+                if mode == "wifi":
+                    script = self.wifi_connect_script
+                elif mode == "iphone":
+                    script = self.iphone_connect_script
+                else:
+                    script = self.connect_script
+
+                if not script:
+                    error_msg = f"Connection script not found for {mode} mode"
+                    self.last_error = error_msg
                     self._set_state(ConnectionState.ERROR)
-                    self._notify_error(self.last_error)
+                    self._notify_error(error_msg)
+                    self.reliability_manager.report_failure("script_not_found", error_msg)
                     return
 
-            # Step 2b: For iPhone/WiFi mode, validate SSID
-            if mode in ["iphone", "wifi"] and not ssid:
-                self.last_error = f"SSID required for {mode} mode"
+                self.logger.info(f"Running connection script: {script}")
+
+                # Build command args with enhanced error handling
+                success = self._execute_connection_script(script, mode, ssid, password)
+                
+                if success:
+                    self._set_state(ConnectionState.CONNECTED)
+                    self.current_failures = 0  # Reset failure counter on success
+                    self.logger.ok(f"{mode.upper()} connection established successfully")
+                else:
+                    error_msg = f"{mode.upper()} connection failed"
+                    self.last_error = error_msg
+                    self._set_state(ConnectionState.ERROR)
+                    self._notify_error(error_msg)
+                    self.reliability_manager.report_failure("connection_script_failed", error_msg, self.current_interface)
+
+            except Exception as e:
+                error_msg = f"Connection thread error: {e}"
+                self.last_error = error_msg
                 self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                return
-
-            # Step 3: Run connect script
-            # SECURITY FIX: Use dynamically found script path, not hardcoded
-            if mode == "wifi":
-                script = self.wifi_connect_script
-            elif mode == "iphone":
-                script = self.iphone_connect_script
-            else:
-                script = self.connect_script
-
-            if not script:
-                self.last_error = f"Connection script not found for {mode} mode"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                return
-
-            self.logger.info(f"Running connection script: {script}")
-
-            # Build command args. Prefer passing as arguments (pkexec strips env)
+                self._notify_error(error_msg)
+                self.reliability_manager.report_failure("connection_thread_exception", error_msg)
+                self.logger.error(f"Connection thread failed: {e}")
+    
+    @timed_operation("connection_script")
+    def _execute_connection_script(self, script: str, mode: str, ssid: Optional[str], password: Optional[str]) -> bool:
+        """Execute connection script with enhanced error handling and timeout"""
+        try:
             cmd = [script]
             if mode in ["iphone", "wifi"] and ssid:
                 cmd += [f"SSID={ssid}"]
