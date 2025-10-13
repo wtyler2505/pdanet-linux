@@ -981,6 +981,27 @@ class ConnectionManager:
         if not self.stealth_active:
             return "DISABLED"
         
+    def get_comprehensive_status(self) -> Dict[str, Any]:
+        """
+        Get comprehensive system status including performance and reliability metrics
+        P2-PERF: Enhanced status reporting
+        """
+        base_status = self.get_connection_status()
+        
+        # Add performance metrics
+        if hasattr(self, 'resource_manager'):
+            base_status['performance'] = self.resource_manager.get_resource_summary()
+        
+        # Add reliability metrics  
+        if hasattr(self, 'reliability_manager'):
+            base_status['reliability'] = self.reliability_manager.get_reliability_summary()
+            base_status['failure_analysis'] = self.reliability_manager.get_failure_analysis()
+        
+        # Add network health
+        if hasattr(self, 'reliability_manager'):
+            base_status['network_health'] = self.reliability_manager.check_connection_health().value
+        
+        return base_status
         level_names = {1: "BASIC", 2: "MODERATE", 3: "AGGRESSIVE"}
         return f"ACTIVE (L{self.stealth_level}: {level_names.get(self.stealth_level, 'UNKNOWN')})"
 
