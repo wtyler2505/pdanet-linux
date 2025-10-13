@@ -960,6 +960,49 @@ class PdaNetGUI(Gtk.Window):
 
         # Update network quality indicator
         if is_connected:
+    def update_stealth_status(self):
+        """
+        Update stealth status display with real-time information
+        P1-FUNC-8: Fix stealth status display to show real-time updates
+        """
+        try:
+            # Get stealth status from connection manager
+            stealth_status_str = self.connection.get_stealth_status_string()
+            
+            # Update the status panel stealth label
+            if hasattr(self, 'status_stealth_label'):
+                if "ACTIVE" in stealth_status_str:
+                    self.status_stealth_label.get_children()[1].set_markup(
+                        f"<span foreground='{Colors.GREEN}'>{stealth_status_str}</span>"
+                    )
+                else:
+                    self.status_stealth_label.get_children()[1].set_markup(
+                        f"<span foreground='{Colors.TEXT_GRAY}'>{stealth_status_str}</span>"
+                    )
+            
+            # Update the operations panel stealth status
+            if hasattr(self, 'stealth_status'):
+                if "DISABLED" in stealth_status_str:
+                    self.stealth_status.set_text("[DISABLED]")
+                    self.stealth_status.get_style_context().remove_class("connected")
+                    self.stealth_status.get_style_context().add_class("disconnected")
+                else:
+                    # Extract level for display
+                    if "L1" in stealth_status_str:
+                        display_text = "[L1: BASIC]"
+                    elif "L2" in stealth_status_str:
+                        display_text = "[L2: MODERATE]"
+                    elif "L3" in stealth_status_str:
+                        display_text = "[L3: AGGRESSIVE]"
+                    else:
+                        display_text = "[ACTIVE]"
+                    
+                    self.stealth_status.set_text(display_text)
+                    self.stealth_status.get_style_context().remove_class("disconnected")
+                    self.stealth_status.get_style_context().add_class("connected")
+                    
+        except Exception as e:
+            self.logger.error(f"Failed to update stealth status: {e}")
             self.update_network_quality()
 
         return True
