@@ -35,6 +35,16 @@ except (ValueError, ImportError):
     HAS_APPINDICATOR = False
     AppIndicator3 = None
 
+# Try to import Notify for desktop notifications
+try:
+    gi.require_version("Notify", "0.7")
+    from gi.repository import Notify
+
+    HAS_NOTIFY = True
+except (ValueError, ImportError):
+    HAS_NOTIFY = False
+    Notify = None
+
 import fcntl
 import json
 import subprocess
