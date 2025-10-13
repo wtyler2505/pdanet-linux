@@ -858,6 +858,10 @@ class PdaNetGUI(Gtk.Window):
         state_text = "ACTIVE" if is_connected else "INACTIVE"
         self.sb_status.set_text(f"SYS: {state_text}")
 
+        # Update network quality indicator
+        if is_connected:
+            self.update_network_quality()
+
         return True
 
     def check_data_usage_warnings(self, downloaded, uploaded):
