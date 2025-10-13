@@ -800,21 +800,30 @@ class ConnectionManager:
 
     def shutdown(self):
         """
-        Clean shutdown of connection manager
-        Issue #96-102, #266: Properly cleanup all threads
+        Enhanced shutdown with performance monitoring cleanup
+        Issue #96-102, #266: Properly cleanup all threads and resources
         """
         self.logger.info("Shutting down connection manager...")
         
-        # Stop monitoring
+        # Stop monitoring systems
         self.stop_monitoring()
+        
+        # Stop performance and reliability monitoring
+        if hasattr(self, 'resource_manager'):
+            self.resource_manager.stop_monitoring()
+        if hasattr(self, 'reliability_manager'):
+            self.reliability_manager.stop_monitoring()
         
         # Cancel any pending operations
         for future in list(self.active_futures):
             future.cancel()
         self.active_futures.clear()
         
-        # Shutdown thread pool
-        self.executor.shutdown(wait=True, timeout=5.0)
+        # Shutdown thread pool with improved timeout handling
+        try:
+            self.executor.shutdown(wait=True, timeout=10.0)
+        except Exception as e:
+            self.logger.warning(f"Executor shutdown warning: {e}")
         
         self.logger.info("Connection manager shutdown complete")
     # ------------------------------------------------------------------
