@@ -68,7 +68,7 @@ def validate_ssid(ssid: str, allow_empty: bool = False) -> str:
     # Verify it matches our safe pattern
     if not SSID_SAFE_PATTERN.match(ssid):
         raise ValidationError(
-            f"SSID contains invalid characters. Allowed: A-Z, a-z, 0-9, space, _ - . @ # ( ) [ ]"
+            "SSID contains invalid characters. Allowed: A-Z, a-z, 0-9, space, _ - . @ # ( ) [ ]"
         )
     
     return ssid

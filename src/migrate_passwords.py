@@ -161,32 +161,32 @@ def print_migration_report(results: dict, dry_run: bool = False):
     if results["backup_path"]:
         print(f"\n✓ Backup created: {results['backup_path']}")
     
-    print(f"\n📊 Statistics:")
+    print("\n📊 Statistics:")
     print(f"   Migrated to keyring: {results['migrated']}")
     print(f"   Failed to migrate:   {results['failed']}")
     print(f"   Skipped (no pwd):    {results['skipped']}")
     
     if results["networks"]:
-        print(f"\n📝 Networks:")
+        print("\n📝 Networks:")
         for net in results["networks"]:
             status_icon = "✓" if "migrated" in net["status"] else "⚠" if "failed" in net["status"] else "•"
             print(f"   {status_icon} {net['ssid']}: {net['status']}")
     
     if results["errors"]:
-        print(f"\n⚠️  Errors:")
+        print("\n⚠️  Errors:")
         for error in results["errors"]:
             print(f"   • {error}")
     
     if results["success"]:
         if dry_run:
-            print(f"\n✓ Dry run completed successfully")
-            print(f"  Run without --dry-run to perform actual migration")
+            print("\n✓ Dry run completed successfully")
+            print("  Run without --dry-run to perform actual migration")
         else:
-            print(f"\n✓ Migration completed successfully")
+            print("\n✓ Migration completed successfully")
             if results["migrated"] > 0:
                 print(f"  {results['migrated']} password(s) now stored securely in system keyring")
     else:
-        print(f"\n✗ Migration failed")
+        print("\n✗ Migration failed")
     
     print("="*60 + "\n")
 
