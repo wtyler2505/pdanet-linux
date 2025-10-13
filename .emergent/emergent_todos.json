@@ -1,11 +1,7 @@
 [
   {
-    "content": "P1-FUNC-2: Implement state transition validation in connection_manager",
-    "status": "completed"
-  },
-  {
     "content": "P1-FUNC-3: Fix thread leaks - proper join/cleanup of monitoring threads",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "P1-FUNC-4: Replace fragile nmcli parsing with -t -f field selection",
@@ -16,15 +12,19 @@
     "status": "pending"
   },
   {
-    "content": "P1-FUNC-6: Implement proper error recovery and cleanup on connection failures",
+    "content": "P1-FUNC-6: Implement error recovery and cleanup on connection failures",
     "status": "pending"
   },
   {
     "content": "P1-FUNC-7: Add bounded ThreadPoolExecutor instead of spawning unlimited threads",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "P1-FUNC-8: Fix stealth status display to show real-time updates",
+    "status": "pending"
+  },
+  {
+    "content": "P1: Update plan.md with progress",
     "status": "pending"
   }
 ]
