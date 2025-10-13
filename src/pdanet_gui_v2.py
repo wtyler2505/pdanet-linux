@@ -1647,10 +1647,21 @@ class PdaNetGUI(Gtk.Window):
 
     def on_connection_state_changed(self, new_state):
         """Callback for connection state changes"""
+        # Send desktop notification
+        if new_state == ConnectionState.CONNECTED:
+            self.show_notification("Connected", "PdaNet connection established", "low")
+        elif new_state == ConnectionState.DISCONNECTED:
+            self.show_notification("Disconnected", "PdaNet connection closed", "low")
+        elif new_state == ConnectionState.ERROR:
+            error_msg = self.connection.last_error or "Unknown error"
+            self.show_notification("Connection Error", error_msg, "critical")
+        
         GLib.idle_add(self.update_button_states)
 
     def on_connection_error(self, error_message):
         """Callback for connection errors"""
+        # Send notification
+        self.show_notification("Connection Error", error_message, "critical")
 
         def show_error():
             dialog = Gtk.MessageDialog(
