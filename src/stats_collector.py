@@ -60,8 +60,56 @@ class StatsCollector:
         self.packet_loss_history.clear()
 
     def stop_session(self):
-        """End current connection session"""
+        """End current connection session and save to history"""
+        if self.start_time:
+            self.save_session_to_history()
         self.start_time = None
+
+    def save_session_to_history(self):
+        """Save current session data to connection history"""
+        if not self.start_time:
+            return
+        
+        try:
+            history_file = Path(CONFIG_DIR) / "connection_history.json"
+            
+            # Ensure config directory exists
+            Path(CONFIG_DIR).mkdir(parents=True, exist_ok=True)
+            
+            session_data = {
+                "timestamp": datetime.now().isoformat(),
+                "duration": self.get_uptime(),
+                "downloaded": self.get_total_downloaded(),
+                "uploaded": self.get_total_uploaded(),
+                "interface": self.current_interface,
+                "avg_latency": self.get_average_latency()
+            }
+            
+            # Load existing history
+            history = []
+            if history_file.exists():
+                try:
+                    with open(history_file) as f:
+                        history = json.load(f)
+                except Exception:
+                    history = []
+            
+            # Add new session
+            history.append(session_data)
+            
+            # Keep only last 100 sessions
+            history = history[-100:]
+            
+            # Save updated history
+            with open(history_file, 'w') as f:
+                json.dump(history, f, indent=2)
+            
+            if self._logger:
+                self._logger.info(f"Session saved to history: {session_data['duration']}s, "
+                                f"↓{session_data['downloaded']}B ↑{session_data['uploaded']}B")
+        except Exception as e:
+            if self._logger:
+                self._logger.warning(f"Failed to save session history: {e}")
 
     def update_bandwidth(self, interface="usb0"):
         """Update bandwidth statistics from network interface"""
