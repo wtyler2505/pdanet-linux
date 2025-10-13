@@ -17,14 +17,14 @@
   },
   {
     "content": "Add export/import settings functionality",
+    "status": "completed"
+  },
+  {
+    "content": "Add quick-switch connection profiles",
     "status": "in_progress"
   },
   {
     "content": "Create bandwidth usage graph visualization",
-    "status": "pending"
-  },
-  {
-    "content": "Add quick-switch connection profiles",
     "status": "pending"
   },
   {
