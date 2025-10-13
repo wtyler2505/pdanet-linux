@@ -2035,7 +2035,7 @@ class PdaNetGUI(Gtk.Window):
                     from datetime import datetime
                     dt = datetime.fromisoformat(timestamp)
                     timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-                except:
+                except Exception:
                     timestamp_str = timestamp[:19] if len(timestamp) > 19 else timestamp
                 
                 duration = Format.format_uptime(int(session.get('duration', 0)))
