@@ -1177,27 +1177,8 @@ class PdaNetGUI(Gtk.Window):
         
         dialog.run()
         dialog.destroy()
-                f"<span foreground='{Colors.GREEN}'>● ACTIVE</span>"
-            )
-            self.header_status_label.set_markup(
-                f"<span foreground='{Colors.GREEN}'>[CONNECTED]</span>"
-            )
-        elif state == ConnectionState.CONNECTING:
-            self.status_state_label.get_children()[1].set_markup(
-                f"<span foreground='{Colors.ORANGE}'>◐ CONNECTING</span>"
-            )
-            self.header_status_label.set_markup(
-                f"<span foreground='{Colors.ORANGE}'>[CONNECTING]</span>"
-            )
-        else:
-            self.status_state_label.get_children()[1].set_markup(
-                f"<span foreground='{Colors.RED}'>● INACTIVE</span>"
-            )
-            self.header_status_label.set_markup(
-                f"<span foreground='{Colors.TEXT_GRAY}'>[DISCONNECTED]</span>"
-            )
 
-        # Update interface
+    def update_stealth_status(self):
         interface = self.connection.current_interface or "NOT DETECTED"
         self.status_interface_label.get_children()[1].set_text(interface)
 
