@@ -9,7 +9,15 @@
   },
   {
     "content": "Implement data usage warnings/alerts system",
+    "status": "completed"
+  },
+  {
+    "content": "Implement network quality visual indicator",
     "status": "in_progress"
+  },
+  {
+    "content": "Add export/import settings functionality",
+    "status": "pending"
   },
   {
     "content": "Create bandwidth usage graph visualization",
@@ -17,14 +25,6 @@
   },
   {
     "content": "Add quick-switch connection profiles",
-    "status": "pending"
-  },
-  {
-    "content": "Implement network quality visual indicator",
-    "status": "pending"
-  },
-  {
-    "content": "Add export settings functionality",
     "status": "pending"
   },
   {
