@@ -36,6 +36,34 @@ class ConnectionState(Enum):
     ERROR = "error"
 
 
+# Valid state transitions (Issue #56)
+# Each state maps to a set of valid next states
+VALID_TRANSITIONS = {
+    ConnectionState.DISCONNECTED: {
+        ConnectionState.CONNECTING,
+        ConnectionState.ERROR,
+    },
+    ConnectionState.CONNECTING: {
+        ConnectionState.CONNECTED,
+        ConnectionState.ERROR,
+        ConnectionState.DISCONNECTING,  # Allow cancellation during connect
+    },
+    ConnectionState.CONNECTED: {
+        ConnectionState.DISCONNECTING,
+        ConnectionState.ERROR,
+        ConnectionState.DISCONNECTED,  # Network loss detection
+    },
+    ConnectionState.DISCONNECTING: {
+        ConnectionState.DISCONNECTED,
+        ConnectionState.ERROR,
+    },
+    ConnectionState.ERROR: {
+        ConnectionState.DISCONNECTED,
+        ConnectionState.CONNECTING,  # Allow retry from error
+    },
+}
+
+
 class ConnectionManager:
     def __init__(self):
         self.state = ConnectionState.DISCONNECTED
