@@ -151,6 +151,10 @@ class PdaNetGUI(Gtk.Window):
         # Setup keyboard shortcuts
         self.setup_keyboard_shortcuts()
 
+        # Initialize data usage warning tracking
+        self.last_warning_time = 0
+        self.warning_thresholds_hit = set()
+
         # Load settings
         self.load_settings()
 
