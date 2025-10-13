@@ -397,18 +397,26 @@ class PdaNetGUI(Gtk.Window):
         panel.pack_start(self.status_uptime_label, False, False, 3)
         panel.pack_start(self.status_stealth_label, False, False, 3)
 
-        # Quality bar
+        # Quality bar with status indicator
         quality_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        
+        quality_header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         quality_label = Gtk.Label(label="CONNECTION QUALITY")
         quality_label.get_style_context().add_class("metric-label")
         quality_label.set_xalign(0)
+        
+        self.quality_status_label = Gtk.Label(label="● UNKNOWN")
+        self.quality_status_label.set_xalign(1)
+        
+        quality_header.pack_start(quality_label, True, True, 0)
+        quality_header.pack_start(self.quality_status_label, False, False, 0)
 
         self.quality_progress = Gtk.ProgressBar()
-        self.quality_progress.set_fraction(0.75)
-        self.quality_progress.set_text("75%")
+        self.quality_progress.set_fraction(0.0)
+        self.quality_progress.set_text("Not Connected")
         self.quality_progress.set_show_text(True)
 
-        quality_box.pack_start(quality_label, False, False, 0)
+        quality_box.pack_start(quality_header, False, False, 0)
         quality_box.pack_start(self.quality_progress, False, False, 0)
         panel.pack_start(quality_box, False, False, 5)
 
