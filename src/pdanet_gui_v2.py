@@ -64,23 +64,98 @@ from theme import Colors, Format, get_css
 
 
 class SingleInstance:
-    """Ensure only one instance of GUI runs"""
+    """
+    Ensure only one instance of GUI runs
+    SECURITY FIX: Audit Issue #1, #295
+    - Uses XDG-compliant path instead of /tmp
+    - Creates lockfile with O_EXCL for atomicity
+    - Sets restrictive permissions (0600)
+    """
 
-    def __init__(self, lockfile="/tmp/pdanet-linux-gui.lock"):
-        self.lockfile = lockfile
+    def __init__(self, lockfile=None):
+        if lockfile is None:
+            # Use XDG_RUNTIME_DIR if available, otherwise ~/.cache
+            runtime_dir = os.environ.get('XDG_RUNTIME_DIR')
+            if runtime_dir and os.path.isdir(runtime_dir):
+                lock_dir = Path(runtime_dir)
+            else:
+                lock_dir = Path.home() / ".cache" / "pdanet-linux"
+                lock_dir.mkdir(parents=True, exist_ok=True)
+            
+            lockfile = lock_dir / "pdanet-linux-gui.lock"
+        
+        self.lockfile = Path(lockfile)
         self.fp = None
 
     def acquire(self):
-        """Acquire lock"""
+        """
+        Acquire lock atomically and securely
+        Returns True if lock acquired, False if another instance is running
+        """
         try:
-            self.fp = open(self.lockfile, "w")
+            # Ensure parent directory exists with restrictive permissions
+            self.lockfile.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            
+            # Open with O_CREAT|O_EXCL|O_WRONLY for atomic creation
+            # If file exists, this will fail immediately
+            fd = os.open(
+                self.lockfile,
+                os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+                mode=0o600  # Owner read/write only
+            )
+            self.fp = os.fdopen(fd, 'w')
+            
+            # Write PID for debugging
+            self.fp.write(str(os.getpid()))
+            self.fp.flush()
+            
+            # Apply fcntl lock as additional protection
             fcntl.lockf(self.fp, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            
             return True
+            
+        except FileExistsError:
+            # File exists - another instance might be running
+            # Check if it's stale (previous instance crashed)
+            return self._handle_stale_lock()
+            
         except OSError:
+            # Lock is held by another process
+            return False
+
+    def _handle_stale_lock(self):
+        """
+        Check if lock file is stale and clean it up if so
+        Returns True if lock was acquired after cleanup, False otherwise
+        """
+        try:
+            # Try to read PID from lock file
+            with open(self.lockfile, 'r') as f:
+                pid_str = f.read().strip()
+            
+            if not pid_str.isdigit():
+                # Invalid lock file, remove it
+                self.lockfile.unlink(missing_ok=True)
+                return self.acquire()
+            
+            pid = int(pid_str)
+            
+            # Check if process is still running
+            try:
+                os.kill(pid, 0)  # Signal 0 just checks if process exists
+                # Process exists, lock is valid
+                return False
+            except OSError:
+                # Process doesn't exist, lock is stale
+                self.lockfile.unlink(missing_ok=True)
+                return self.acquire()
+                
+        except Exception:
+            # Can't determine if stale, assume it's valid
             return False
 
     def release(self):
-        """Release lock"""
+        """Release lock and clean up"""
         if not self.fp:
             return
         try:
@@ -94,8 +169,7 @@ class SingleInstance:
             pass
         finally:
             try:
-                if os.path.exists(self.lockfile):
-                    os.unlink(self.lockfile)
+                self.lockfile.unlink(missing_ok=True)
             except OSError:
                 pass
             self.fp = None
