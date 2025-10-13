@@ -1478,6 +1478,157 @@ class PdaNetGUI(Gtk.Window):
         dialog.run()
         dialog.destroy()
 
+    def on_history_clicked(self, button):
+        """Show connection history dialog"""
+        dialog = Gtk.Dialog(title="Connection History", parent=self, flags=Gtk.DialogFlags.MODAL)
+        dialog.add_buttons(
+            "Clear History", Gtk.ResponseType.REJECT,
+            Gtk.STOCK_CLOSE, Gtk.ResponseType.CLOSE
+        )
+        dialog.set_default_size(700, 500)
+
+        content = dialog.get_content_area()
+        content.set_spacing(10)
+        content.set_margin_top(10)
+        content.set_margin_bottom(10)
+        content.set_margin_start(10)
+        content.set_margin_end(10)
+
+        # Header with stats
+        header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        
+        title_label = Gtk.Label(label="CONNECTION HISTORY")
+        title_label.get_style_context().add_class("panel-header")
+        header_box.pack_start(title_label, False, False, 0)
+
+        # Load history
+        history = self.load_connection_history()
+        
+        if not history:
+            no_history_label = Gtk.Label(label="No connection history available")
+            no_history_label.get_style_context().add_class("metric-label")
+            content.pack_start(no_history_label, True, True, 0)
+        else:
+            # Summary stats
+            total_sessions = len(history)
+            total_downloaded = sum(s.get('downloaded', 0) for s in history)
+            total_uploaded = sum(s.get('uploaded', 0) for s in history)
+            total_duration = sum(s.get('duration', 0) for s in history)
+            
+            stats_label = Gtk.Label()
+            stats_text = (
+                f"Total Sessions: {total_sessions}  |  "
+                f"Downloaded: {Format.format_bytes(total_downloaded)}  |  "
+                f"Uploaded: {Format.format_bytes(total_uploaded)}  |  "
+                f"Total Time: {Format.format_uptime(int(total_duration))}"
+            )
+            stats_label.set_markup(f"<span foreground='{Colors.GREEN}'>{stats_text}</span>")
+            header_box.pack_start(stats_label, False, False, 5)
+
+        content.pack_start(header_box, False, False, 0)
+
+        # History list with TreeView
+        if history:
+            # Create ListStore
+            # Columns: Timestamp, Duration, Downloaded, Uploaded, Interface, Latency
+            liststore = Gtk.ListStore(str, str, str, str, str, str)
+            
+            for session in reversed(history):  # Most recent first
+                timestamp = session.get('timestamp', 'Unknown')
+                try:
+                    # Format timestamp nicely
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(timestamp)
+                    timestamp_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+                except:
+                    timestamp_str = timestamp[:19] if len(timestamp) > 19 else timestamp
+                
+                duration = Format.format_uptime(int(session.get('duration', 0)))
+                downloaded = Format.format_bytes(session.get('downloaded', 0))
+                uploaded = Format.format_bytes(session.get('uploaded', 0))
+                interface = session.get('interface', 'Unknown')
+                latency = f"{session.get('avg_latency', 0):.1f} ms"
+                
+                liststore.append([timestamp_str, duration, downloaded, uploaded, interface, latency])
+
+            # Create TreeView
+            treeview = Gtk.TreeView(model=liststore)
+            treeview.set_grid_lines(Gtk.TreeViewGridLines.BOTH)
+            
+            # Add columns
+            columns = [
+                ("Timestamp", 0, 180),
+                ("Duration", 1, 100),
+                ("Downloaded", 2, 100),
+                ("Uploaded", 3, 100),
+                ("Interface", 4, 80),
+                ("Avg Latency", 5, 90)
+            ]
+            
+            for col_title, col_id, width in columns:
+                renderer = Gtk.CellRendererText()
+                column = Gtk.TreeViewColumn(col_title, renderer, text=col_id)
+                column.set_min_width(width)
+                column.set_resizable(True)
+                column.set_sort_column_id(col_id)
+                treeview.append_column(column)
+
+            # Scroll window
+            scroll = Gtk.ScrolledWindow()
+            scroll.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+            scroll.add(treeview)
+            content.pack_start(scroll, True, True, 0)
+
+        dialog.show_all()
+        response = dialog.run()
+        
+        # Handle clear history
+        if response == Gtk.ResponseType.REJECT:
+            confirm = Gtk.MessageDialog(
+                transient_for=dialog,
+                flags=0,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.YES_NO,
+                text="Clear Connection History?"
+            )
+            confirm.format_secondary_text(
+                "This will permanently delete all connection history. This action cannot be undone."
+            )
+            
+            if confirm.run() == Gtk.ResponseType.YES:
+                self.clear_connection_history()
+                self.logger.ok("Connection history cleared")
+                confirm.destroy()
+                dialog.destroy()
+                # Reopen dialog to show empty state
+                self.on_history_clicked(button)
+                return
+            
+            confirm.destroy()
+        
+        dialog.destroy()
+
+    def load_connection_history(self):
+        """Load connection history from file"""
+        try:
+            history_file = Path(CONFIG_DIR) / "connection_history.json"
+            if history_file.exists():
+                with open(history_file) as f:
+                    return json.load(f)
+        except Exception as e:
+            self.logger.warning(f"Failed to load connection history: {e}")
+        return []
+
+    def clear_connection_history(self):
+        """Clear all connection history"""
+        try:
+            history_file = Path(CONFIG_DIR) / "connection_history.json"
+            if history_file.exists():
+                history_file.unlink()
+            self.show_notification("History Cleared", "Connection history has been deleted", "low")
+        except Exception as e:
+            self.logger.error(f"Failed to clear history: {e}")
+
     def on_speedtest_clicked(self, button):
         """Run speed test and show results"""
         # Create dialog
