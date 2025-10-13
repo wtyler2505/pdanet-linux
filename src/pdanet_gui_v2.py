@@ -1766,6 +1766,67 @@ class PdaNetGUI(Gtk.Window):
         dialog.destroy()
         return imported
 
+    def load_saved_profiles(self):
+        """Load saved WiFi network profiles into combo box"""
+        # Clear existing profiles (except first item)
+        self.profiles_combo.remove_all()
+        self.profiles_combo.append("none", "-- Select Profile --")
+        
+        # Get saved networks
+        saved_networks = self.config.list_saved_wifi_networks()
+        
+        if saved_networks:
+            for ssid in saved_networks:
+                self.profiles_combo.append(ssid, ssid)
+            self.logger.info(f"Loaded {len(saved_networks)} saved profiles")
+        else:
+            self.logger.debug("No saved profiles found")
+        
+        self.profiles_combo.set_active(0)
+
+    def on_profile_selected(self, combo):
+        """Handle profile selection from quick-switch"""
+        profile_id = combo.get_active_id()
+        
+        if not profile_id or profile_id == "none":
+            return
+        
+        # Get saved password
+        ssid = profile_id
+        password = self.config.get_wifi_password(ssid)
+        
+        if not password:
+            self.logger.warning(f"No saved password for {ssid}")
+            return
+        
+        # Auto-select WiFi mode
+        self.mode_combo.set_active_id("wifi")
+        
+        # Auto-connect with saved credentials
+        confirm = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=f"Connect to {ssid}?"
+        )
+        confirm.format_secondary_text(
+            "Using saved credentials from profile.\n"
+            "WiFi mode with stealth enabled."
+        )
+        
+        if confirm.run() == Gtk.ResponseType.YES:
+            self.logger.info(f"Quick-connecting to profile: {ssid}")
+            self.connect_button.set_sensitive(False)
+            self.disconnect_button.set_sensitive(False)
+            self.connection.connect(mode="wifi", ssid=ssid, password=password)
+            GLib.timeout_add(2000, self.update_button_states)
+        
+        confirm.destroy()
+        
+        # Reset combo to default
+        self.profiles_combo.set_active(0)
+
     def show_manage_networks_dialog(self):
         """Show dialog to manage saved WiFi networks"""
         dialog = Gtk.Dialog(title="Manage Saved Networks", parent=self, flags=Gtk.DialogFlags.MODAL)
