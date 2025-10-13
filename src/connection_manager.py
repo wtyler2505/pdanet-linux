@@ -740,6 +740,9 @@ class ConnectionManager:
                 if self.current_interface:
                     self.stats.update_bandwidth(self.current_interface)
 
+                # Update stealth status (P1-FUNC-8)
+                self.update_stealth_status()
+
                 # Check if interface still exists
                 interface = self.detect_interface()
                 if not interface:
