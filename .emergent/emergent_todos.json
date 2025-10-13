@@ -1,15 +1,11 @@
 [
   {
-    "content": "P0-SEC-2: Add comprehensive input validation for SSID/password/hostname to prevent injection",
+    "content": "P0-SEC-3: Secure lockfile - move from /tmp to XDG_RUNTIME_DIR with proper permissions",
     "status": "completed"
   },
   {
-    "content": "P0-SEC-3: Secure lockfile - move from /tmp to XDG_RUNTIME_DIR with proper permissions",
-    "status": "in_progress"
-  },
-  {
     "content": "P0-SEC-4: Unify privilege model - pkexec only, clear error if unavailable",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "P0-SEC-5: Create SECURITY.md with threat model and disclosure policy",
