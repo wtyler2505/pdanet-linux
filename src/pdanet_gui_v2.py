@@ -594,6 +594,11 @@ class PdaNetGUI(Gtk.Window):
 
         panel.pack_start(options_box, False, False, 2)
 
+        # History button
+        history_button = Gtk.Button(label="📊 HISTORY")
+        history_button.connect("clicked", self.on_history_clicked)
+        panel.pack_end(history_button, False, False, 2)
+
         # Speed test button
         speedtest_button = Gtk.Button(label="⚡ SPEED TEST")
         speedtest_button.connect("clicked", self.on_speedtest_clicked)
