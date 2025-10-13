@@ -30,7 +30,8 @@ SSID_SAFE_PATTERN = re.compile(
 )
 
 # Portable unsafe characters that could cause shell issues
-SHELL_UNSAFE_CHARS = set(';&|<>`${}()*?[]!\\"\'\n\r\t')
+# Note: () and [] are allowed in SSID pattern, so excluded from this set
+SHELL_UNSAFE_CHARS = set(';&|<>`${}*?!\\"\'\n\r\t')
 
 
 def validate_ssid(ssid: str, allow_empty: bool = False) -> str:
