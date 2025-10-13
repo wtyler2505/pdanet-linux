@@ -1,20 +1,21 @@
 #!/usr/bin/env python3
 """
-Backend Testing for Enhanced PdaNet Linux P1 Functionality
-Tests P1-FUNC-4, P1-FUNC-5, and P1-FUNC-8 enhancements
+Backend Testing for Enhanced PdaNet Linux P1 + P2 Functionality
+Tests P1-FUNC-4, P1-FUNC-5, P1-FUNC-8 and P2 Performance & Reliability enhancements
 """
 
 import os
 import sys
 import time
 import subprocess
+import threading
 from unittest.mock import Mock, patch, MagicMock
 
 # Add src to path
 sys.path.insert(0, "/app/src")
 
 print("=" * 80)
-print("PDANET LINUX - P1 FUNCTIONALITY BACKEND TESTING")
+print("PDANET LINUX - P1 + P2 COMPREHENSIVE BACKEND TESTING")
 print("=" * 80)
 print()
 
