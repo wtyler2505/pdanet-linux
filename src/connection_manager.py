@@ -106,6 +106,17 @@ class ConnectionManager:
         self.iphone_connect_script = self._find_script("pdanet-iphone-connect")
         self.iphone_disconnect_script = self._find_script("pdanet-iphone-disconnect")
 
+        # NetworkManager D-Bus client for robust network management
+        self.nm_client = NMClient()
+        if self.nm_client.available():
+            self.logger.info("Using NetworkManager D-Bus API for network management")
+        else:
+            self.logger.warning("NetworkManager D-Bus unavailable, falling back to nmcli")
+
+        # Stealth mode status tracking
+        self.stealth_active = False
+        self.stealth_level = 0
+
     def _run_privileged(self, argv, timeout=60):
         """
         Run a privileged command using PolicyKit (pkexec).
