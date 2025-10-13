@@ -828,6 +828,9 @@ class PdaNetGUI(Gtk.Window):
                 f"↓ {Format.format_bytes(total_dl)}  ↑ {Format.format_bytes(total_ul)}"
             )
 
+            # Check data usage warnings
+            self.check_data_usage_warnings(total_dl, total_ul)
+
             # Network rate for statusbar
             self.sb_network.set_text(f"NET: {Format.format_bandwidth(dl_rate + ul_rate)}")
         else:
