@@ -640,11 +640,28 @@ class ConnectionManager:
         self.logger.info("Connection monitoring started")
 
     def stop_monitoring(self):
-        """Stop connection health monitoring"""
+        """
+        Stop connection health monitoring
+        Issue #96-102: Properly join thread to prevent leaks
+        """
+        if not self.monitoring_active:
+            return
+        
         self.monitoring_active = False
-        if self.monitor_thread:
-            self.monitor_thread = None
-        self.logger.info("Connection monitoring stopped")
+        self.logger.info("Stopping connection monitoring...")
+        
+        # Wait for monitor thread to finish (with timeout)
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            try:
+                self.monitor_thread.join(timeout=3.0)
+                if self.monitor_thread.is_alive():
+                    self.logger.warning("Monitor thread did not stop within timeout")
+                else:
+                    self.logger.info("Connection monitoring stopped")
+            except Exception as e:
+                self.logger.error(f"Error joining monitor thread: {e}")
+        
+        self.monitor_thread = None
 
     def _monitor_loop(self):
         """Monitor connection health"""
