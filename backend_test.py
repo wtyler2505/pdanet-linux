@@ -587,9 +587,494 @@ test("Stealth Status Methods Exist", test_stealth_status_methods_exist)
 test("Enhanced WiFi Scanning Methods", test_enhanced_wifi_scanning_methods)
 test("Interface Detection Methods", test_interface_detection_methods)
 
+# Test Suite 7: P2 Performance Optimization Tests
+print("\n[7/10] P2 PERFORMANCE OPTIMIZATION TESTS")
+print("-" * 80)
+
+def test_memory_optimizer_functionality():
+    """Test MemoryOptimizer class and methods"""
+    from performance_optimizer import MemoryOptimizer
+    
+    optimizer = MemoryOptimizer()
+    assert optimizer is not None, "MemoryOptimizer failed to initialize"
+    
+    # Test memory tracking
+    memory_info = optimizer.track_memory_usage()
+    assert 'rss' in memory_info, "Memory info missing RSS"
+    assert 'timestamp' in memory_info, "Memory info missing timestamp"
+    assert 'gc_counts' in memory_info, "Memory info missing GC counts"
+    
+    # Test memory trend calculation
+    time.sleep(0.1)
+    optimizer.track_memory_usage()  # Second measurement
+    trend = optimizer.get_memory_trend(minutes=1)
+    assert 'growth_rate' in trend, "Memory trend missing growth rate"
+    assert 'avg_usage' in trend, "Memory trend missing average usage"
+
+def test_smart_cache_operations():
+    """Test SmartCache with TTL and eviction"""
+    from performance_optimizer import SmartCache
+    
+    cache = SmartCache(default_ttl=1, max_size=3)
+    
+    # Test basic operations
+    cache.set('key1', 'value1')
+    assert cache.get('key1') == 'value1', "Cache get/set failed"
+    
+    # Test cache statistics
+    stats = cache.get_stats()
+    assert 'hit_count' in stats, "Cache stats missing hit count"
+    assert 'miss_count' in stats, "Cache stats missing miss count"
+    assert 'hit_rate' in stats, "Cache stats missing hit rate"
+    assert stats['hit_count'] == 1, "Hit count incorrect"
+    
+    # Test eviction (max_size=3)
+    cache.set('key2', 'value2')
+    cache.set('key3', 'value3')
+    cache.set('key4', 'value4')  # Should evict oldest
+    assert cache.get_stats()['size'] == 3, "Cache eviction failed"
+
+def test_resource_manager_monitoring():
+    """Test ResourceManager monitoring and resource tracking"""
+    from performance_optimizer import ResourceManager
+    
+    manager = ResourceManager()
+    assert manager is not None, "ResourceManager failed to initialize"
+    
+    # Test resource summary
+    summary = manager.get_resource_summary()
+    assert 'cache' in summary, "Resource summary missing cache info"
+    assert 'gc' in summary, "Resource summary missing GC info"
+    
+    # Test monitoring lifecycle
+    manager.start_monitoring(interval=1)
+    time.sleep(0.2)  # Brief pause
+    assert manager._monitoring == True, "Monitoring failed to start"
+    
+    manager.stop_monitoring()
+    time.sleep(0.2)  # Brief pause
+    assert manager._monitoring == False, "Monitoring failed to stop"
+
+def test_performance_decorators():
+    """Test @timed_operation and @cached_method decorators"""
+    from performance_optimizer import timed_operation, cached_method
+    
+    # Test timed operation decorator
+    @timed_operation("test_operation")
+    def test_function():
+        time.sleep(0.001)  # 1ms delay
+        return "test_result"
+    
+    result = test_function()
+    assert result == "test_result", "Timed operation decorator failed"
+    
+    # Test cached method decorator
+    class TestClass:
+        @cached_method(ttl=5, max_size=10)
+        def expensive_method(self, x):
+            return x * 2
+    
+    obj = TestClass()
+    result1 = obj.expensive_method(5)
+    result2 = obj.expensive_method(5)  # Should be cached
+    
+    assert result1 == 10, "Cached method result incorrect"
+    assert result2 == 10, "Cached method result incorrect"
+    
+    # Check cache stats are available
+    stats = obj.expensive_method.cache_stats()
+    assert 'hit_count' in stats, "Cached method stats missing"
+
+def test_resource_context_manager():
+    """Test resource_context context manager"""
+    from performance_optimizer import resource_context
+    
+    # Test context manager doesn't raise exceptions
+    try:
+        with resource_context("test_operation"):
+            time.sleep(0.001)
+            data = [i for i in range(10)]
+        
+        assert len(data) == 10, "Resource context affected operation"
+    except Exception as e:
+        assert False, f"Resource context manager failed: {e}"
+
+test("Memory Optimizer Functionality", test_memory_optimizer_functionality)
+test("Smart Cache Operations", test_smart_cache_operations)
+test("Resource Manager Monitoring", test_resource_manager_monitoring)
+test("Performance Decorators", test_performance_decorators)
+test("Resource Context Manager", test_resource_context_manager)
+
+# Test Suite 8: P2 High-Performance Stats Collector
+print("\n[8/10] P2 HIGH-PERFORMANCE STATS COLLECTOR TESTS")
+print("-" * 80)
+
+def test_high_performance_stats_initialization():
+    """Test HighPerformanceStatsCollector initialization"""
+    with patch('high_performance_stats.get_logger'), \
+         patch('high_performance_stats.get_resource_manager'):
+        from high_performance_stats import HighPerformanceStatsCollector
+        
+        collector = HighPerformanceStatsCollector()
+        assert collector is not None, "HighPerformanceStatsCollector failed to initialize"
+        assert hasattr(collector, 'rx_history'), "Missing rx_history deque"
+        assert hasattr(collector, 'tx_history'), "Missing tx_history deque"
+        assert hasattr(collector, 'resource_manager'), "Missing resource_manager"
+
+def test_high_performance_session_management():
+    """Test enhanced session management with performance tracking"""
+    with patch('high_performance_stats.get_logger'), \
+         patch('high_performance_stats.get_resource_manager'):
+        from high_performance_stats import HighPerformanceStatsCollector
+        
+        collector = HighPerformanceStatsCollector()
+        
+        # Test session start
+        collector.start_session()
+        assert collector.start_time is not None, "Session start time not set"
+        assert collector.bytes_sent == 0, "Initial bytes_sent not zero"
+        assert collector.bytes_received == 0, "Initial bytes_received not zero"
+        
+        # Test session stop
+        collector.stop_session()
+        # Should not raise exceptions
+
+def test_optimized_bandwidth_update():
+    """Test optimized bandwidth update with memory-efficient storage"""
+    with patch('high_performance_stats.get_logger'), \
+         patch('high_performance_stats.get_resource_manager'):
+        from high_performance_stats import HighPerformanceStatsCollector
+        
+        collector = HighPerformanceStatsCollector()
+        collector.start_session()
+        
+        # Mock interface stats files
+        with patch('pathlib.Path.exists', return_value=True):
+            with patch('builtins.open', side_effect=[
+                Mock(__enter__=Mock(return_value=Mock(read=Mock(return_value="1024\n"))),
+                     __exit__=Mock(return_value=None)),  # rx_bytes
+                Mock(__enter__=Mock(return_value=Mock(read=Mock(return_value="512\n"))),
+                     __exit__=Mock(return_value=None))   # tx_bytes
+            ]):
+                collector.update_bandwidth("test0")
+                
+                # Should not raise exceptions and should update tracking
+                assert collector.current_interface == "test0", "Interface not updated"
+
+def test_cached_rate_calculations():
+    """Test cached average rate calculations"""
+    with patch('high_performance_stats.get_logger'), \
+         patch('high_performance_stats.get_resource_manager'):
+        from high_performance_stats import HighPerformanceStatsCollector
+        
+        collector = HighPerformanceStatsCollector()
+        
+        # Add some test data to history
+        current_time = time.time()
+        collector.rx_history.append((current_time - 5, 100.0))
+        collector.rx_history.append((current_time - 3, 200.0))
+        collector.rx_history.append((current_time - 1, 150.0))
+        
+        # Test cached rate calculation
+        avg_rate = collector.get_average_download_rate(seconds=10)
+        assert isinstance(avg_rate, float), "Average rate should be float"
+        assert avg_rate >= 0, "Average rate should be non-negative"
+
+def test_performance_stats_collection():
+    """Test performance statistics collection"""
+    with patch('high_performance_stats.get_logger'), \
+         patch('high_performance_stats.get_resource_manager'):
+        from high_performance_stats import HighPerformanceStatsCollector
+        
+        collector = HighPerformanceStatsCollector()
+        collector.start_session()
+        
+        # Simulate some updates
+        collector._update_count = 10
+        collector._total_update_time = 0.1
+        
+        perf_stats = collector.get_performance_stats()
+        assert 'update_performance' in perf_stats, "Missing update performance stats"
+        assert 'cache_stats' in perf_stats, "Missing cache stats"
+        assert 'data_structures' in perf_stats, "Missing data structure stats"
+        
+        update_perf = perf_stats['update_performance']
+        assert 'total_updates' in update_perf, "Missing total updates"
+        assert 'avg_update_time_ms' in update_perf, "Missing average update time"
+
+def test_atomic_session_history_saving():
+    """Test atomic session history saving with backup"""
+    with patch('high_performance_stats.get_logger'), \
+         patch('high_performance_stats.get_resource_manager'):
+        from high_performance_stats import HighPerformanceStatsCollector
+        
+        collector = HighPerformanceStatsCollector()
+        collector.start_session()
+        
+        # Mock file operations for atomic save
+        with patch('pathlib.Path.mkdir'), \
+             patch('pathlib.Path.exists', return_value=False), \
+             patch('builtins.open', Mock()), \
+             patch('pathlib.Path.replace'):
+            
+            # Should not raise exceptions during save
+            collector._save_session_to_history_optimized()
+
+test("High-Performance Stats Initialization", test_high_performance_stats_initialization)
+test("High-Performance Session Management", test_high_performance_session_management)
+test("Optimized Bandwidth Update", test_optimized_bandwidth_update)
+test("Cached Rate Calculations", test_cached_rate_calculations)
+test("Performance Stats Collection", test_performance_stats_collection)
+test("Atomic Session History Saving", test_atomic_session_history_saving)
+
+# Test Suite 9: P2 Reliability Manager
+print("\n[9/10] P2 RELIABILITY MANAGER TESTS")
+print("-" * 80)
+
+def test_reliability_manager_initialization():
+    """Test ReliabilityManager initialization and basic functionality"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager, ConnectionHealth
+        
+        manager = ReliabilityManager()
+        assert manager is not None, "ReliabilityManager failed to initialize"
+        assert hasattr(manager, 'failure_history'), "Missing failure_history"
+        assert hasattr(manager, 'diagnostic_history'), "Missing diagnostic_history"
+        assert hasattr(manager, 'recovery_strategies'), "Missing recovery_strategies"
+        assert len(manager.recovery_strategies) > 0, "No recovery strategies registered"
+
+def test_connection_health_assessment():
+    """Test connection health assessment and diagnostic capabilities"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager, ConnectionHealth
+        
+        manager = ReliabilityManager()
+        
+        # Mock successful ping diagnostic
+        mock_diagnostic = Mock()
+        mock_diagnostic.success = True
+        mock_diagnostic.latency_ms = 25.0
+        mock_diagnostic.packet_loss_percent = 0.0
+        
+        with patch.object(manager, '_run_ping_diagnostic', return_value=mock_diagnostic):
+            health = manager.check_connection_health()
+            assert isinstance(health, ConnectionHealth), "Health check should return ConnectionHealth enum"
+
+def test_failure_reporting_and_tracking():
+    """Test failure reporting and tracking system"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager
+        
+        manager = ReliabilityManager()
+        
+        # Test failure reporting
+        manager.report_failure("test_failure", "Test error message", "test0")
+        assert len(manager.failure_history) == 1, "Failure not recorded"
+        
+        failure = manager.failure_history[0]
+        assert failure.failure_type == "test_failure", "Failure type incorrect"
+        assert failure.error_message == "Test error message", "Error message incorrect"
+        assert failure.interface == "test0", "Interface incorrect"
+
+def test_network_diagnostic_execution():
+    """Test network diagnostic execution (ping tests)"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager
+        
+        manager = ReliabilityManager()
+        
+        # Mock successful ping result
+        mock_result = Mock()
+        mock_result.returncode = 0
+        mock_result.stdout = "PING 8.8.8.8: 56 data bytes\n64 bytes from 8.8.8.8: icmp_seq=0 ttl=64 time=25.123 ms\n--- 8.8.8.8 ping statistics ---\n1 packets transmitted, 1 received, 0% packet loss"
+        mock_result.stderr = ""
+        
+        with patch('subprocess.run', return_value=mock_result):
+            diagnostic = manager._run_ping_diagnostic("8.8.8.8")
+            
+            assert diagnostic is not None, "Diagnostic should not be None"
+            assert diagnostic.success == True, "Diagnostic should be successful"
+            assert diagnostic.latency_ms > 0, "Latency should be parsed"
+
+def test_recovery_strategy_execution():
+    """Test automated recovery strategy execution"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager
+        
+        manager = ReliabilityManager()
+        manager.auto_recovery_enabled = False  # Disable auto-recovery for testing
+        
+        # Test individual recovery strategies
+        assert manager._recovery_flush_dns() in [True, False], "DNS flush should return boolean"
+        assert manager._recovery_restart_network_interface() in [True, False], "Interface restart should return boolean"
+        assert manager._recovery_clear_iptables_cache() in [True, False], "Iptables clear should return boolean"
+
+def test_reliability_summary_and_analysis():
+    """Test reliability summary and failure analysis"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager
+        
+        manager = ReliabilityManager()
+        
+        # Add some test data
+        manager.report_failure("connection_timeout", "Connection timed out", "wlan0")
+        manager.report_failure("dns_failure", "DNS resolution failed", "wlan0")
+        
+        # Test reliability summary
+        summary = manager.get_reliability_summary()
+        assert 'current_health' in summary, "Missing current health"
+        assert 'reliability_stats' in summary, "Missing reliability stats"
+        assert 'monitoring_active' in summary, "Missing monitoring status"
+        
+        # Test failure analysis
+        analysis = manager.get_failure_analysis()
+        assert 'total_failures' in analysis, "Missing total failures"
+        assert 'failure_types' in analysis, "Missing failure types"
+        assert analysis['total_failures'] == 2, "Failure count incorrect"
+
+def test_reliability_monitoring_lifecycle():
+    """Test reliability monitoring start/stop lifecycle"""
+    with patch('reliability_manager.get_logger'):
+        from reliability_manager import ReliabilityManager
+        
+        manager = ReliabilityManager()
+        
+        # Test monitoring start
+        manager.start_monitoring()
+        time.sleep(0.1)  # Brief pause
+        assert manager._monitoring_active == True, "Monitoring failed to start"
+        
+        # Test monitoring stop
+        manager.stop_monitoring()
+        time.sleep(0.1)  # Brief pause
+        assert manager._monitoring_active == False, "Monitoring failed to stop"
+
+test("Reliability Manager Initialization", test_reliability_manager_initialization)
+test("Connection Health Assessment", test_connection_health_assessment)
+test("Failure Reporting and Tracking", test_failure_reporting_and_tracking)
+test("Network Diagnostic Execution", test_network_diagnostic_execution)
+test("Recovery Strategy Execution", test_recovery_strategy_execution)
+test("Reliability Summary and Analysis", test_reliability_summary_and_analysis)
+test("Reliability Monitoring Lifecycle", test_reliability_monitoring_lifecycle)
+
+# Test Suite 10: P2 Enhanced Connection Manager Integration
+print("\n[10/10] P2 ENHANCED CONNECTION MANAGER INTEGRATION TESTS")
+print("-" * 80)
+
+def test_connection_manager_p2_initialization():
+    """Test ConnectionManager P2 enhancements initialization"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test P2 components are initialized
+        assert hasattr(conn, 'resource_manager'), "Missing resource_manager"
+        assert hasattr(conn, 'reliability_manager'), "Missing reliability_manager"
+        assert conn.resource_manager is not None, "resource_manager not initialized"
+        assert conn.reliability_manager is not None, "reliability_manager not initialized"
+
+def test_enhanced_connection_status_reporting():
+    """Test enhanced connection status with performance and reliability metrics"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test comprehensive status reporting
+        status = conn.get_comprehensive_status()
+        assert 'state' in status, "Missing connection state"
+        
+        # P2 enhancements should be included if available
+        if hasattr(conn, 'resource_manager'):
+            # Performance metrics may be included
+            pass
+        if hasattr(conn, 'reliability_manager'):
+            # Reliability metrics may be included
+            pass
+
+def test_enhanced_error_handling_with_reliability():
+    """Test enhanced error handling with reliability reporting"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager, ConnectionState
+        
+        conn = ConnectionManager()
+        
+        # Mock a connection failure scenario
+        with patch.object(conn, '_find_script', return_value=None):
+            conn._connect_thread("usb")
+            
+            # Should handle gracefully and report to reliability manager
+            assert conn.get_state() == ConnectionState.ERROR, "Should be in error state"
+            assert conn.last_error is not None, "Should have error message"
+
+def test_performance_monitoring_integration():
+    """Test performance monitoring integration in connection operations"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test that performance decorators are working
+        # Interface detection should be timed
+        with patch('subprocess.run', return_value=Mock(returncode=0, stdout="")):
+            interface = conn.detect_interface()
+            # Should complete without errors (timing is internal)
+
+def test_resource_cleanup_on_shutdown():
+    """Test proper resource cleanup on shutdown"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test shutdown cleanup
+        try:
+            conn.shutdown()
+            # Should complete without errors
+        except Exception as e:
+            assert False, f"Shutdown failed: {e}"
+
+def test_backward_compatibility_with_p1():
+    """Test that P2 enhancements maintain P1 functionality"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test P1 methods still work
+        assert hasattr(conn, 'scan_wifi_networks'), "P1 WiFi scanning missing"
+        assert hasattr(conn, 'update_stealth_status'), "P1 stealth status missing"
+        assert hasattr(conn, 'get_stealth_status_string'), "P1 stealth string missing"
+        
+        # Test P1 stealth functionality
+        conn.stealth_active = True
+        conn.stealth_level = 2
+        status_string = conn.get_stealth_status_string()
+        assert "ACTIVE" in status_string, "Stealth status string incorrect"
+
+test("Connection Manager P2 Initialization", test_connection_manager_p2_initialization)
+test("Enhanced Connection Status Reporting", test_enhanced_connection_status_reporting)
+test("Enhanced Error Handling with Reliability", test_enhanced_error_handling_with_reliability)
+test("Performance Monitoring Integration", test_performance_monitoring_integration)
+test("Resource Cleanup on Shutdown", test_resource_cleanup_on_shutdown)
+test("Backward Compatibility with P1", test_backward_compatibility_with_p1)
+
 # Summary
 print("\n" + "=" * 80)
-print("P1 FUNCTIONALITY TEST SUMMARY")
+print("P1 + P2 COMPREHENSIVE TEST SUMMARY")
 print("=" * 80)
 
 passed = sum(1 for _, success, _ in test_results if success)
