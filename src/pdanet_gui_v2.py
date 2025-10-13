@@ -132,6 +132,9 @@ class PdaNetGUI(Gtk.Window):
         # Setup system tray
         self.setup_indicator()
 
+        # Initialize desktop notifications
+        self.setup_notifications()
+
         # Register callbacks
         self.connection.register_state_change_callback(self.on_connection_state_changed)
         self.connection.register_error_callback(self.on_connection_error)
@@ -141,8 +144,9 @@ class PdaNetGUI(Gtk.Window):
         if "--test-mode" in sys.argv:
             self._test_state_file = os.environ.get("PDANET_TEST_STATE_FILE")
 
-        # Start update loop
-        GLib.timeout_add(1000, self.update_display)
+        # Start update loop with configurable interval
+        update_interval = self.config.get("update_interval_ms", 1000)
+        GLib.timeout_add(update_interval, self.update_display)
 
         # Load settings
         self.load_settings()
