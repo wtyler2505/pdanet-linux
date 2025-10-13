@@ -852,6 +852,45 @@ class PdaNetGUI(Gtk.Window):
 
         return True
 
+    def check_data_usage_warnings(self, downloaded, uploaded):
+        """Check and alert for data usage thresholds"""
+        # Only check if warnings are enabled
+        if not self.config.get("enable_data_warnings", True):
+            return
+        
+        total_usage = downloaded + uploaded
+        warning_threshold = self.config.get("data_warning_threshold_mb", 1000) * 1024 * 1024  # MB to bytes
+        critical_threshold = self.config.get("data_critical_threshold_mb", 5000) * 1024 * 1024
+        
+        current_time = time.time()
+        
+        # Avoid spamming warnings (minimum 5 minutes between same warning)
+        if current_time - self.last_warning_time < 300:
+            return
+        
+        # Critical threshold (5GB default)
+        if total_usage >= critical_threshold and 'critical' not in self.warning_thresholds_hit:
+            self.warning_thresholds_hit.add('critical')
+            self.last_warning_time = current_time
+            
+            msg = (f"CRITICAL: {Format.format_bytes(total_usage)} data used this session! "
+                   f"You've exceeded {Format.format_bytes(critical_threshold)}. "
+                   "Consider disconnecting to avoid carrier detection.")
+            
+            self.show_notification("Data Usage Critical", msg, "critical")
+            self.logger.warning(msg)
+        
+        # Warning threshold (1GB default)
+        elif total_usage >= warning_threshold and 'warning' not in self.warning_thresholds_hit:
+            self.warning_thresholds_hit.add('warning')
+            self.last_warning_time = current_time
+            
+            msg = (f"Data usage: {Format.format_bytes(total_usage)} this session. "
+                   f"Approaching threshold of {Format.format_bytes(warning_threshold)}.")
+            
+            self.show_notification("Data Usage Warning", msg, "normal")
+            self.logger.info(msg)
+
     def update_log_display(self):
         """Update log text view with efficient incremental updates"""
         logs = self.logger.get_all_logs()
