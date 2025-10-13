@@ -87,6 +87,11 @@ class ConnectionManager:
         # Monitoring
         self.monitor_thread = None
         self.monitoring_active = False
+        
+        # Thread management (Issue #266, #P1-FUNC-7)
+        # Bounded thread pool to prevent unbounded thread spawning
+        self.executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="pdanet")
+        self.active_futures = set()  # Track active operations
 
         # Callbacks
         self.on_state_change_callbacks = []
