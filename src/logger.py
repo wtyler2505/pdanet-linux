@@ -11,7 +11,14 @@ from pathlib import Path
 
 
 class PdaNetLogger:
-    def __init__(self, log_dir=None):
+    def __init__(self, log_dir=None, log_level="INFO"):
+        """
+        Initialize logger with configurable log level
+        
+        Args:
+            log_dir: Directory for log files (optional)
+            log_level: Initial log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        """
         # Allow overriding log directory via env for tests/CI
         # Falls back to XDG-style path in home, then to repo-local .tmp_config if needed
         env_dir = os.environ.get("PDANET_LOG_DIR")
@@ -33,38 +40,46 @@ class PdaNetLogger:
 
         # Setup logger
         self.logger = logging.getLogger("pdanet")
+        # Set to DEBUG to capture everything; handlers filter by their own levels
         self.logger.setLevel(logging.DEBUG)
+
+        # Store handlers for level updates
+        self.file_handler = None
+        self.console_handler = None
 
         # Rotating file handler (max 5MB, keep 5 backups)
         # Attempt to create rotating file handler; if it fails, fall back to console-only
-        file_handler = None
         try:
-            file_handler = RotatingFileHandler(
+            self.file_handler = RotatingFileHandler(
                 self.log_file,
                 maxBytes=5 * 1024 * 1024,  # 5 MB
                 backupCount=5,
             )
-            file_handler.setLevel(logging.DEBUG)
+            # File handler captures everything (DEBUG+)
+            self.file_handler.setLevel(logging.DEBUG)
         except Exception:
-            file_handler = None
+            self.file_handler = None
 
-        # Console handler for development
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
+        # Console handler respects configured log level
+        self.console_handler = logging.StreamHandler()
 
         # Format: [2025-10-03 20:34:12] [INFO] :: Message
         formatter = logging.Formatter(
             "[%(asctime)s] [%(levelname)s] :: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
-        if file_handler is not None:
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
-        console_handler.setFormatter(formatter)
-        self.logger.addHandler(console_handler)
+        if self.file_handler is not None:
+            self.file_handler.setFormatter(formatter)
+            self.logger.addHandler(self.file_handler)
+        self.console_handler.setFormatter(formatter)
+        self.logger.addHandler(self.console_handler)
+
+        # Set initial log level (Issue #131)
+        self.set_log_level(log_level)
 
         # Log buffer for GUI (last N entries)
         self.log_buffer = []
         self.max_buffer_size = 1000
+        self.buffer_min_level = logging.INFO  # Buffer filter level
 
     def debug(self, message):
         """Debug level message"""
