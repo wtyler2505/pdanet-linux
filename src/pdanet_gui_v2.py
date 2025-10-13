@@ -1361,7 +1361,28 @@ class PdaNetGUI(Gtk.Window):
         return ssid, password, save_password
 
     def scan_networks(self, mode):
-        """Scan for available WiFi networks using nmcli"""
+        """
+        Enhanced WiFi scanning with robust error handling
+        P1-FUNC-5: Robust WiFi scanning/selection
+        """
+        try:
+            # Use connection manager's enhanced scanning
+            access_points = self.connection.scan_wifi_networks(force_rescan=True)
+            
+            # Convert AccessPoint objects to tuple format for backward compatibility
+            networks = []
+            for ap in access_points:
+                networks.append((ap.ssid, str(ap.signal_strength), ap.security_string))
+            
+            self.logger.info(f"Scanned {len(networks)} WiFi networks")
+            return networks
+            
+        except Exception as e:
+            self.logger.error(f"Enhanced network scan failed, falling back to nmcli: {e}")
+            return self._scan_networks_fallback()
+
+    def _scan_networks_fallback(self):
+        """Fallback network scanning using nmcli (legacy method)"""
         try:
             # Rescan for fresh results
             subprocess.run(
