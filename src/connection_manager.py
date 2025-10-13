@@ -257,12 +257,40 @@ class ConnectionManager:
                 self.logger.error(f"Error callback error: {e}")
 
     def _set_state(self, new_state):
-        """Update connection state and notify"""
-        if self.state != new_state:
-            old_state = self.state
-            self.state = new_state
-            self.logger.info(f"State changed: {old_state.value} -> {new_state.value}")
-            self._notify_state_change()
+        """
+        Update connection state with transition validation
+        Issue #56: Prevent illegal state transitions
+        
+        Args:
+            new_state: Target ConnectionState
+        
+        Returns:
+            bool: True if transition successful, False if invalid
+        """
+        if self.state == new_state:
+            # Already in target state, no-op
+            return True
+        
+        old_state = self.state
+        
+        # Validate transition
+        valid_next_states = VALID_TRANSITIONS.get(old_state, set())
+        if new_state not in valid_next_states:
+            self.logger.error(
+                f"Invalid state transition: {old_state.value} -> {new_state.value}. "
+                f"Valid transitions from {old_state.value}: {[s.value for s in valid_next_states]}"
+            )
+            # For safety, allow transition to ERROR from any state
+            if new_state == ConnectionState.ERROR:
+                self.logger.warning("Forcing transition to ERROR state")
+            else:
+                return False
+        
+        # Perform transition
+        self.state = new_state
+        self.logger.info(f"State changed: {old_state.value} -> {new_state.value}")
+        self._notify_state_change()
+        return True
 
     def detect_interface(self):
         """Detect active network interface (USB or WiFi)"""
