@@ -1,11 +1,11 @@
 [
   {
     "content": "P1-FUNC-1: Fix config log level application - ensure logger uses config value",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "P1-FUNC-2: Implement state transition validation in connection_manager",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "P1-FUNC-3: Fix thread leaks - proper join/cleanup of monitoring threads",
