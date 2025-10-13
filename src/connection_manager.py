@@ -311,9 +311,51 @@ class ConnectionManager:
         return True
 
     def detect_interface(self):
-        """Detect active network interface (USB or WiFi)"""
+        """Detect active network interface using NetworkManager D-Bus or fallback to nmcli"""
         try:
-            # If we have a current mode, detect appropriate interface
+            # First, try robust D-Bus method
+            if self.nm_client.available():
+                return self._detect_interface_dbus()
+            else:
+                # Fallback to nmcli parsing
+                return self._detect_interface_nmcli()
+        except Exception as e:
+            self.logger.error(f"Interface detection failed: {e}")
+            return None
+
+    def _detect_interface_dbus(self):
+        """Detect interface using NetworkManager D-Bus API"""
+        try:
+            if self.current_mode in ["iphone", "wifi"]:
+                # For WiFi/iPhone mode, find active WiFi interface
+                wifi_device = self.nm_client.get_connected_wifi_device()
+                if wifi_device:
+                    self.current_interface = wifi_device.interface
+                    self.logger.ok(f"WiFi interface detected via D-Bus: {wifi_device.interface}")
+                    return wifi_device.interface
+                
+                self.logger.warning("No active WiFi interface detected via D-Bus")
+                return None
+            else:
+                # For USB mode, look for active ethernet/generic interfaces
+                active_interface = self.nm_client.get_active_interface("ethernet")
+                if not active_interface:
+                    active_interface = self.nm_client.get_active_interface("generic")
+                
+                if active_interface:
+                    self.current_interface = active_interface
+                    self.logger.ok(f"USB interface detected via D-Bus: {active_interface}")
+                    return active_interface
+                
+                self.logger.warning("No USB tethering interface detected via D-Bus")
+                return None
+        except Exception as e:
+            self.logger.error(f"D-Bus interface detection failed: {e}")
+            return None
+
+    def _detect_interface_nmcli(self):
+        """Fallback interface detection using nmcli (legacy method)"""
+        try:
             if self.current_mode in ["iphone", "wifi"]:
                 # For WiFi/iPhone mode, find active WiFi interface
                 result = subprocess.run(
@@ -331,14 +373,13 @@ class ConnectionManager:
                             device, dev_type, state = parts[0], parts[1], parts[2]
                             if dev_type == "wifi" and state == "connected":
                                 self.current_interface = device
-                                self.logger.ok(f"WiFi interface detected: {device}")
+                                self.logger.ok(f"WiFi interface detected via nmcli: {device}")
                                 return device
 
-                self.logger.warning("No active WiFi interface detected")
+                self.logger.warning("No active WiFi interface detected via nmcli")
                 return None
-
             else:
-                # For USB mode, look for USB/RNDIS interfaces
+                # For USB mode, look for USB/RNDIS interfaces using ip command
                 result = subprocess.run(
                     ["ip", "link", "show"], check=False, capture_output=True, text=True, timeout=5
                 )
@@ -350,13 +391,13 @@ class ConnectionManager:
                         if len(parts) >= 2:
                             iface = parts[1].strip().split("@")[0]
                             self.current_interface = iface
-                            self.logger.ok(f"USB interface detected: {iface}")
+                            self.logger.ok(f"USB interface detected via ip: {iface}")
                             return iface
 
-                self.logger.warning("No USB tethering interface detected")
+                self.logger.warning("No USB tethering interface detected via ip")
                 return None
         except Exception as e:
-            self.logger.error(f"Interface detection failed: {e}")
+            self.logger.error(f"nmcli interface detection failed: {e}")
             return None
 
     # ------------------------------------------------------------------
