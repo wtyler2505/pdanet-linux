@@ -1,15 +1,11 @@
 [
   {
-    "content": "P0-SEC-1: Migrate all plaintext passwords to keyring with backup and migration path",
+    "content": "P0-SEC-2: Add comprehensive input validation for SSID/password/hostname to prevent injection",
     "status": "completed"
   },
   {
-    "content": "P0-SEC-2: Add comprehensive input validation for SSID/password/hostname to prevent injection",
-    "status": "in_progress"
-  },
-  {
     "content": "P0-SEC-3: Secure lockfile - move from /tmp to XDG_RUNTIME_DIR with proper permissions",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "P0-SEC-4: Unify privilege model - pkexec only, clear error if unavailable",
