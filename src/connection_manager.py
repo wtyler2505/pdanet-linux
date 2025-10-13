@@ -785,6 +785,163 @@ class ConnectionManager:
         self.executor.shutdown(wait=True, timeout=5.0)
         
         self.logger.info("Connection manager shutdown complete")
+    # ------------------------------------------------------------------
+    # Enhanced WiFi and Stealth Management (P1-FUNC-5, P1-FUNC-8)
+    # ------------------------------------------------------------------
+    
+    def scan_wifi_networks(self, force_rescan=False):
+        """
+        Robust WiFi scanning with caching and error recovery
+        P1-FUNC-5: Enhanced WiFi scanning/selection
+        """
+        try:
+            if self.nm_client.available():
+                return self.nm_client.scan_wifi_networks(force_rescan=force_rescan)
+            else:
+                # Fallback to nmcli-based scanning
+                return self._scan_wifi_nmcli(force_rescan)
+        except Exception as e:
+            self.logger.error(f"WiFi scan failed: {e}")
+            return []
+    
+    def _scan_wifi_nmcli(self, force_rescan=False):
+        """Fallback WiFi scanning using nmcli"""
+        try:
+            # Request rescan if needed
+            if force_rescan:
+                subprocess.run(
+                    ["nmcli", "device", "wifi", "rescan"],
+                    check=False,
+                    capture_output=True,
+                    timeout=5
+                )
+                time.sleep(2)  # Give scan time to complete
+            
+            # Get network list
+            result = subprocess.run(
+                ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY", "device", "wifi", "list"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            
+            if result.returncode != 0:
+                return []
+            
+            # Parse results with better error handling
+            networks = []
+            seen_ssids = set()
+            
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                
+                parts = line.split(":")
+                if len(parts) < 1 or not parts[0]:
+                    continue
+                
+                ssid = parts[0].strip()
+                if ssid in seen_ssids:  # Skip duplicates
+                    continue
+                
+                seen_ssids.add(ssid)
+                signal = parts[1] if len(parts) > 1 else "0"
+                security = parts[2] if len(parts) > 2 else "None"
+                
+                # Convert to consistent format
+                from nm_client import AccessPoint
+                try:
+                    signal_strength = int(signal) if signal.isdigit() else 0
+                    security_list = [security] if security and security != "None" else ["none"]
+                    
+                    networks.append(AccessPoint(
+                        ssid=ssid,
+                        signal_strength=signal_strength,
+                        security=security_list
+                    ))
+                except ValueError:
+                    continue
+            
+            # Sort by signal strength
+            networks.sort(key=lambda x: x.signal_strength, reverse=True)
+            return networks
+            
+        except Exception as e:
+            self.logger.error(f"nmcli WiFi scan failed: {e}")
+            return []
+    
+    def get_connection_status(self):
+        """Get comprehensive connection status including stealth information"""
+        try:
+            if self.nm_client.available():
+                nm_status = self.nm_client.get_connection_status()
+            else:
+                nm_status = {"available": False, "error": "NetworkManager D-Bus not available"}
+            
+            return {
+                "state": self.state.value,
+                "interface": self.current_interface,
+                "mode": self.current_mode,
+                "proxy_available": self.proxy_available,
+                "stealth_active": self.stealth_active,
+                "stealth_level": self.stealth_level,
+                "auto_reconnect": self.auto_reconnect_enabled,
+                "reconnect_attempts": self.reconnect_attempts,
+                "last_error": self.last_error,
+                "nm_status": nm_status
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get connection status: {e}")
+            return {"state": self.state.value, "error": str(e)}
+    
+    def update_stealth_status(self):
+        """
+        Update stealth mode status by checking actual stealth script status
+        P1-FUNC-8: Real-time stealth status display
+        """
+        try:
+            if not self.current_interface:
+                self.stealth_active = False
+                self.stealth_level = 0
+                return
+            
+            # Check if stealth mode is active by examining iptables rules
+            result = subprocess.run(
+                ["iptables", "-t", "mangle", "-L", "WIFI_STEALTH"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if result.returncode == 0 and "TTL" in result.stdout:
+                self.stealth_active = True
+                # Determine stealth level from current rules
+                if "IPv6" in result.stdout or "ip6tables" in result.stdout:
+                    self.stealth_level = 3  # Aggressive
+                elif "DNS" in result.stdout:
+                    self.stealth_level = 2  # Moderate
+                else:
+                    self.stealth_level = 1  # Basic
+                
+                self.logger.debug(f"Stealth mode active: Level {self.stealth_level}")
+            else:
+                self.stealth_active = False
+                self.stealth_level = 0
+                
+        except Exception as e:
+            self.logger.debug(f"Stealth status check failed: {e}")
+            self.stealth_active = False
+            self.stealth_level = 0
+    
+    def get_stealth_status_string(self):
+        """Get human-readable stealth status string"""
+        if not self.stealth_active:
+            return "DISABLED"
+        
+        level_names = {1: "BASIC", 2: "MODERATE", 3: "AGGRESSIVE"}
+        return f"ACTIVE (L{self.stealth_level}: {level_names.get(self.stealth_level, 'UNKNOWN')})"
 
     def _handle_disconnect_and_reconnect(self):
         """Handle unexpected disconnect and attempt reconnection"""
