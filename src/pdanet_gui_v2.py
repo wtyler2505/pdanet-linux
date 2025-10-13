@@ -922,6 +922,7 @@ class PdaNetGUI(Gtk.Window):
             status_color = Colors.RED
         
         self.quality_status_label.set_markup(f"<span foreground='{status_color}'>{status_text}</span>")
+
     def check_data_usage_warnings(self, downloaded, uploaded):
         """Check and alert for data usage thresholds"""
         # Only check if warnings are enabled
