@@ -1009,8 +1009,7 @@ class PdaNetGUI(Gtk.Window):
             ssid_combo.remove_all()
             if networks:
                 for ssid, signal, security in networks:
-                    # Show SSID with signal strength
-                    display_text = f"{ssid} ({signal}% - {security})"
+                    # Add SSID to combo (signal and security shown during scan but not stored)
                     ssid_combo.append_text(ssid)
 
                 ssid_combo.set_active(0)
