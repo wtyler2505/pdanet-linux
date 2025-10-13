@@ -706,6 +706,26 @@ class ConnectionManager:
         else:
             self.logger.info("Auto-reconnect disabled")
 
+    def shutdown(self):
+        """
+        Clean shutdown of connection manager
+        Issue #96-102, #266: Properly cleanup all threads
+        """
+        self.logger.info("Shutting down connection manager...")
+        
+        # Stop monitoring
+        self.stop_monitoring()
+        
+        # Cancel any pending operations
+        for future in list(self.active_futures):
+            future.cancel()
+        self.active_futures.clear()
+        
+        # Shutdown thread pool
+        self.executor.shutdown(wait=True, timeout=5.0)
+        
+        self.logger.info("Connection manager shutdown complete")
+
     def _handle_disconnect_and_reconnect(self):
         """Handle unexpected disconnect and attempt reconnection"""
         if not self.auto_reconnect_enabled:
