@@ -72,8 +72,10 @@ class TestSingleInstance(unittest.TestCase):
         """Test successful lock acquisition"""
         # Mock os.open to return a file descriptor
         mock_open.return_value = 5
-        # Mock fdopen to return a file object
-        mock_file = mock_open()
+        # Mock fdopen to return a file object with write method
+        mock_file = MagicMock()
+        mock_file.write = MagicMock()
+        mock_file.flush = MagicMock()
         mock_fdopen.return_value = mock_file
         mock_lockf.return_value = None  # Success
 
@@ -88,6 +90,8 @@ class TestSingleInstance(unittest.TestCase):
         self.assertTrue(flags & os_module.O_CREAT)
         self.assertTrue(flags & os_module.O_EXCL)
         mock_lockf.assert_called_once()
+        # Verify PID was written
+        mock_file.write.assert_called_once()
 
     @patch("fcntl.lockf")
     @patch("os.open", side_effect=FileExistsError())
