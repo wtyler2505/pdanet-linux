@@ -1114,7 +1114,7 @@ for name, success, error in test_results:
         test_suites[suite_names[current_suite]].append((name, success, error))
     current_count += 1
 
-print("\nRESULTS BY P1 FUNCTIONALITY:")
+print("\nRESULTS BY P1 + P2 FUNCTIONALITY:")
 for suite_name, suite_tests in test_suites.items():
     suite_passed = sum(1 for _, success, _ in suite_tests if success)
     suite_total = len(suite_tests)
@@ -1134,13 +1134,18 @@ if failed > 0:
 
 print("\n" + "=" * 80)
 if failed == 0:
-    print("✅ ALL P1 FUNCTIONALITY TESTS PASSED")
+    print("✅ ALL P1 + P2 FUNCTIONALITY TESTS PASSED")
     print("✅ P1-FUNC-4: Robust nmcli replacement - WORKING")
     print("✅ P1-FUNC-5: Enhanced WiFi scanning - WORKING") 
     print("✅ P1-FUNC-8: Real-time stealth status - WORKING")
+    print("✅ P2-PERF: Memory management & optimization - WORKING")
+    print("✅ P2-PERF: High-performance stats collector - WORKING")
+    print("✅ P2-PERF: Performance decorators - WORKING")
+    print("✅ P2-PERF: Reliability manager & fault tolerance - WORKING")
+    print("✅ P2-PERF: Enhanced connection manager integration - WORKING")
 else:
-    print("❌ SOME P1 FUNCTIONALITY TESTS FAILED")
-    print("🔍 Review failed tests above for P1 functionality issues")
+    print("❌ SOME P1 + P2 FUNCTIONALITY TESTS FAILED")
+    print("🔍 Review failed tests above for P1/P2 functionality issues")
 
 print("=" * 80)
 sys.exit(0 if failed == 0 else 1)
