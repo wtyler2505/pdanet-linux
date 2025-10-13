@@ -864,6 +864,64 @@ class PdaNetGUI(Gtk.Window):
 
         return True
 
+    def update_network_quality(self):
+        """Calculate and update network quality indicator with color coding"""
+        # Get metrics
+        latency = self.stats.get_average_latency()
+        packet_loss = self.stats.get_packet_loss()
+        uptime = self.stats.get_uptime()
+        
+        # Calculate quality score (0-100)
+        quality_score = 100
+        
+        # Latency penalty
+        if latency > 0:
+            if latency < 50:
+                latency_penalty = 0
+            elif latency < 100:
+                latency_penalty = 10
+            elif latency < 200:
+                latency_penalty = 25
+            elif latency < 500:
+                latency_penalty = 40
+            else:
+                latency_penalty = 60
+            quality_score -= latency_penalty
+        
+        # Packet loss penalty
+        if packet_loss > 0:
+            quality_score -= min(packet_loss * 2, 40)
+        
+        # Connection stability bonus (longer uptime = bonus, capped at 10)
+        if uptime > 300:  # 5 minutes
+            stability_bonus = min(10, uptime // 300)
+            quality_score = min(100, quality_score + stability_bonus)
+        
+        # Ensure score is in range
+        quality_score = max(0, min(100, quality_score))
+        
+        # Update progress bar
+        self.quality_progress.set_fraction(quality_score / 100.0)
+        self.quality_progress.set_text(f"{int(quality_score)}%")
+        
+        # Color-coded status with emoji-free indicators
+        if quality_score >= 90:
+            status_text = "● EXCELLENT"
+            status_color = Colors.GREEN
+        elif quality_score >= 75:
+            status_text = "● GOOD"
+            status_color = Colors.GREEN_DIM
+        elif quality_score >= 50:
+            status_text = "● FAIR"
+            status_color = Colors.ORANGE
+        elif quality_score >= 25:
+            status_text = "● POOR"
+            status_color = "#FF6B00"  # Dark orange
+        else:
+            status_text = "● CRITICAL"
+            status_color = Colors.RED
+        
+        self.quality_status_label.set_markup(f"<span foreground='{status_color}'>{status_text}</span>")
     def check_data_usage_warnings(self, downloaded, uploaded):
         """Check and alert for data usage thresholds"""
         # Only check if warnings are enabled
