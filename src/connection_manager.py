@@ -118,6 +118,14 @@ class ConnectionManager:
         # Stealth mode status tracking
         self.stealth_active = False
         self.stealth_level = 0
+        
+        # Performance and reliability enhancements (P2)
+        self.resource_manager = get_resource_manager()
+        self.reliability_manager = get_reliability_manager()
+        
+        # Start performance monitoring and reliability checks
+        self.resource_manager.start_monitoring(interval=60)
+        self.reliability_manager.start_monitoring()
 
     def _run_privileged(self, argv, timeout=60):
         """
