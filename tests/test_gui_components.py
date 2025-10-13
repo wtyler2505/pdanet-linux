@@ -65,45 +65,71 @@ class TestSingleInstance(unittest.TestCase):
             pass
 
     @patch("fcntl.lockf")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_acquire_lock_success(self, mock_file, mock_lockf):
+    @patch("os.open")
+    @patch("os.fdopen")
+    def test_acquire_lock_success(self, mock_fdopen, mock_open, mock_lockf):
         """Test successful lock acquisition"""
+        # Mock os.open to return a file descriptor
+        mock_open.return_value = 5
+        # Mock fdopen to return a file object
+        mock_file = mock_open()
+        mock_fdopen.return_value = mock_file
         mock_lockf.return_value = None  # Success
 
         result = self.instance.acquire()
         self.assertTrue(result)
-        mock_file.assert_called_once_with(self.temp_lock.name, "w")
+        # Verify O_EXCL flag was used
+        import os as os_module
+        mock_open.assert_called_once()
+        call_args = mock_open.call_args
+        # Check that O_CREAT and O_EXCL are in the flags
+        flags = call_args[0][1]
+        self.assertTrue(flags & os_module.O_CREAT)
+        self.assertTrue(flags & os_module.O_EXCL)
         mock_lockf.assert_called_once()
 
     @patch("fcntl.lockf")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_acquire_lock_failure(self, mock_file, mock_lockf):
+    @patch("os.open", side_effect=FileExistsError())
+    def test_acquire_lock_failure(self, mock_open, mock_lockf):
         """Test lock acquisition failure (another instance running)"""
-        mock_lockf.side_effect = OSError("Resource temporarily unavailable")
+        # FileExistsError means file already exists (another instance)
+        # Our implementation tries to handle stale locks, but we'll mock that too
+        with patch.object(self.instance, '_handle_stale_lock', return_value=False):
+            result = self.instance.acquire()
+            self.assertFalse(result)
 
-        result = self.instance.acquire()
-        self.assertFalse(result)
-
-    @patch("fcntl.lockf")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_release_lock(self, mock_file, mock_lockf):
+    def test_release_lock(self):
         """Test lock release"""
-        # First acquire the lock
-        self.instance.acquire()
-
-        # Then release it
-        with patch("os.unlink") as mock_unlink:
-            self.instance.release()
-            mock_unlink.assert_called_once_with(self.temp_lock.name)
+        # Create a real lock file for this test
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write(str(os.getpid()).encode())
+            tf.flush()
+            real_path = tf.name
+        
+        # Create instance with the real path
+        instance = SingleInstance(real_path)
+        
+        # Mock the fp to avoid file operations during release
+        instance.fp = unittest.mock.MagicMock()
+        instance.fp.closed = False
+        instance.lockfile = Path(real_path)
+        
+        # Release should unlink the file
+        instance.release()
+        
+        # Verify file was deleted
+        self.assertFalse(Path(real_path).exists())
 
     def test_custom_lockfile_path(self):
         """Test custom lockfile path"""
         custom_path = "/tmp/custom-pdanet.lock"
         instance = SingleInstance(custom_path)
-        self.assertEqual(instance.lockfile, custom_path)
+        # lockfile is now a Path object
+        self.assertEqual(str(instance.lockfile), custom_path)
 
-    @patch("builtins.open", side_effect=PermissionError())
-    def test_acquire_permission_error(self, mock_file):
+    @patch("os.open", side_effect=PermissionError())
+    def test_acquire_permission_error(self, mock_open):
         """Test lock acquisition with permission error"""
         result = self.instance.acquire()
         self.assertFalse(result)
