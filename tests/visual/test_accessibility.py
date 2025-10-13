@@ -4,32 +4,29 @@ Accessibility Visual Testing for PdaNet Linux GUI
 Tests accessibility compliance including color contrast, readability, and WCAG guidelines
 """
 
-import pytest
+import colorsys
+import json
+import math
 import os
 import sys
-import subprocess
 import time
-import json
-from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Union
-from dataclasses import dataclass, asdict
-import colorsys
-import math
+from dataclasses import asdict, dataclass
+
+import pytest
+from PIL import Image, ImageEnhance, ImageFilter
 
 # Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from theme import Colors
-from test_visual_regression import VisualTestRunner, VisualTestConfig
 from logger import get_logger
 
 logger = get_logger()
 
+
 @dataclass
 class AccessibilityConfig:
     """Accessibility test configuration"""
+
     min_contrast_ratio: float = 4.5  # WCAG AA standard
     min_large_text_contrast: float = 3.0  # WCAG AA for large text
     min_touch_target_size: int = 44  # pixels (iOS/Android guidelines)
@@ -38,25 +35,29 @@ class AccessibilityConfig:
     test_low_vision: bool = True
     test_high_contrast: bool = True
 
+
 @dataclass
 class AccessibilityTestResult:
     """Accessibility test result"""
+
     test_name: str
     passed: bool
     contrast_ratio: float
     color_blind_safe: bool
     low_vision_compliant: bool
     touch_targets_adequate: bool
-    issues: List[str]
-    recommendations: List[str]
+    issues: list[str]
+    recommendations: list[str]
     wcag_level: str  # A, AA, or AAA
+
 
 class ColorAnalyzer:
     """Analyzes colors for accessibility compliance"""
 
     @staticmethod
-    def rgb_to_luminance(rgb: Tuple[int, int, int]) -> float:
+    def rgb_to_luminance(rgb: tuple[int, int, int]) -> float:
         """Calculate relative luminance of RGB color"""
+
         def channel_luminance(channel: int) -> float:
             c = channel / 255.0
             if c <= 0.03928:
@@ -65,10 +66,14 @@ class ColorAnalyzer:
                 return pow((c + 0.055) / 1.055, 2.4)
 
         r, g, b = rgb
-        return 0.2126 * channel_luminance(r) + 0.7152 * channel_luminance(g) + 0.0722 * channel_luminance(b)
+        return (
+            0.2126 * channel_luminance(r)
+            + 0.7152 * channel_luminance(g)
+            + 0.0722 * channel_luminance(b)
+        )
 
     @staticmethod
-    def contrast_ratio(color1: Tuple[int, int, int], color2: Tuple[int, int, int]) -> float:
+    def contrast_ratio(color1: tuple[int, int, int], color2: tuple[int, int, int]) -> float:
         """Calculate contrast ratio between two colors"""
         lum1 = ColorAnalyzer.rgb_to_luminance(color1)
         lum2 = ColorAnalyzer.rgb_to_luminance(color2)
@@ -80,29 +85,19 @@ class ColorAnalyzer:
             return (lum2 + 0.05) / (lum1 + 0.05)
 
     @staticmethod
-    def simulate_color_blindness(rgb: Tuple[int, int, int], blindness_type: str) -> Tuple[int, int, int]:
+    def simulate_color_blindness(
+        rgb: tuple[int, int, int], blindness_type: str
+    ) -> tuple[int, int, int]:
         """Simulate color blindness on RGB color"""
-        r, g, b = [c / 255.0 for c in rgb]
+        r, g, b = (c / 255.0 for c in rgb)
 
         # Transformation matrices for different types of color blindness
-        if blindness_type == 'protanopia':  # Red-blind
-            matrix = [
-                [0.567, 0.433, 0],
-                [0.558, 0.442, 0],
-                [0, 0.242, 0.758]
-            ]
-        elif blindness_type == 'deuteranopia':  # Green-blind
-            matrix = [
-                [0.625, 0.375, 0],
-                [0.7, 0.3, 0],
-                [0, 0.3, 0.7]
-            ]
-        elif blindness_type == 'tritanopia':  # Blue-blind
-            matrix = [
-                [0.95, 0.05, 0],
-                [0, 0.433, 0.567],
-                [0, 0.475, 0.525]
-            ]
+        if blindness_type == "protanopia":  # Red-blind
+            matrix = [[0.567, 0.433, 0], [0.558, 0.442, 0], [0, 0.242, 0.758]]
+        elif blindness_type == "deuteranopia":  # Green-blind
+            matrix = [[0.625, 0.375, 0], [0.7, 0.3, 0], [0, 0.3, 0.7]]
+        elif blindness_type == "tritanopia":  # Blue-blind
+            matrix = [[0.95, 0.05, 0], [0, 0.433, 0.567], [0, 0.475, 0.525]]
         else:
             return rgb
 
@@ -115,22 +110,23 @@ class ColorAnalyzer:
         return (
             max(0, min(255, int(new_r * 255))),
             max(0, min(255, int(new_g * 255))),
-            max(0, min(255, int(new_b * 255)))
+            max(0, min(255, int(new_b * 255))),
         )
 
     @staticmethod
-    def is_color_distinguishable(color1: Tuple[int, int, int], color2: Tuple[int, int, int],
-                               threshold: float = 0.1) -> bool:
+    def is_color_distinguishable(
+        color1: tuple[int, int, int], color2: tuple[int, int, int], threshold: float = 0.1
+    ) -> bool:
         """Check if two colors are distinguishable for color blind users"""
-        blindness_types = ['protanopia', 'deuteranopia', 'tritanopia']
+        blindness_types = ["protanopia", "deuteranopia", "tritanopia"]
 
         for blindness_type in blindness_types:
             cb_color1 = ColorAnalyzer.simulate_color_blindness(color1, blindness_type)
             cb_color2 = ColorAnalyzer.simulate_color_blindness(color2, blindness_type)
 
             # Calculate color difference in HSV space
-            hsv1 = colorsys.rgb_to_hsv(cb_color1[0]/255, cb_color1[1]/255, cb_color1[2]/255)
-            hsv2 = colorsys.rgb_to_hsv(cb_color2[0]/255, cb_color2[1]/255, cb_color2[2]/255)
+            hsv1 = colorsys.rgb_to_hsv(cb_color1[0] / 255, cb_color1[1] / 255, cb_color1[2] / 255)
+            hsv2 = colorsys.rgb_to_hsv(cb_color2[0] / 255, cb_color2[1] / 255, cb_color2[2] / 255)
 
             # Calculate difference
             h_diff = min(abs(hsv1[0] - hsv2[0]), 1 - abs(hsv1[0] - hsv2[0]))
@@ -144,13 +140,14 @@ class ColorAnalyzer:
 
         return True
 
+
 class TouchTargetAnalyzer:
     """Analyzes touch target sizes for accessibility"""
 
     def __init__(self, min_size: int = 44):
         self.min_size = min_size
 
-    def find_interactive_elements(self, img: Image.Image) -> List[Tuple[int, int, int, int]]:
+    def find_interactive_elements(self, img: Image.Image) -> list[tuple[int, int, int, int]]:
         """Find potential interactive elements (buttons, links) in image"""
         # This is a simplified version - real implementation would use ML or template matching
         interactive_areas = []
@@ -186,8 +183,9 @@ class TouchTargetAnalyzer:
 
         return interactive_areas
 
-    def _group_similar_colors(self, sample_points: List[Tuple[int, int, Tuple]],
-                            color_threshold: int = 30) -> List[List[Tuple]]:
+    def _group_similar_colors(
+        self, sample_points: list[tuple[int, int, tuple]], color_threshold: int = 30
+    ) -> list[list[tuple]]:
         """Group sample points with similar colors"""
         groups = []
 
@@ -210,8 +208,9 @@ class TouchTargetAnalyzer:
 
         return groups
 
-    def _colors_similar(self, color1: Union[int, Tuple], color2: Union[int, Tuple],
-                       threshold: int = 30) -> bool:
+    def _colors_similar(
+        self, color1: int | tuple, color2: int | tuple, threshold: int = 30
+    ) -> bool:
         """Check if two colors are similar"""
         # Handle grayscale
         if isinstance(color1, int):
@@ -220,10 +219,12 @@ class TouchTargetAnalyzer:
             color2 = (color2, color2, color2)
 
         # Calculate Euclidean distance in RGB space
-        distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(color1[:3], color2[:3])))
+        distance = math.sqrt(
+            sum((a - b) ** 2 for a, b in zip(color1[:3], color2[:3], strict=False))
+        )
         return distance < threshold
 
-    def analyze_touch_targets(self, img: Image.Image) -> Dict[str, Union[bool, List[str], int]]:
+    def analyze_touch_targets(self, img: Image.Image) -> dict[str, bool | list[str] | int]:
         """Analyze touch target adequacy"""
         interactive_areas = self.find_interactive_elements(img)
 
@@ -241,15 +242,18 @@ class TouchTargetAnalyzer:
                 adequate_targets += 1
             else:
                 inadequate_targets += 1
-                issues.append(f"Touch target at ({min_x}, {min_y}) is {width}x{height}px (minimum: {self.min_size}x{self.min_size}px)")
+                issues.append(
+                    f"Touch target at ({min_x}, {min_y}) is {width}x{height}px (minimum: {self.min_size}x{self.min_size}px)"
+                )
 
         return {
-            'adequate_targets': adequate_targets,
-            'inadequate_targets': inadequate_targets,
-            'all_targets_adequate': inadequate_targets == 0,
-            'issues': issues,
-            'total_targets': len(interactive_areas)
+            "adequate_targets": adequate_targets,
+            "inadequate_targets": inadequate_targets,
+            "all_targets_adequate": inadequate_targets == 0,
+            "issues": issues,
+            "total_targets": len(interactive_areas),
         }
+
 
 class AccessibilityTestRunner:
     """Main accessibility test runner"""
@@ -258,9 +262,9 @@ class AccessibilityTestRunner:
         self.config = config or AccessibilityConfig()
         self.color_analyzer = ColorAnalyzer()
         self.touch_analyzer = TouchTargetAnalyzer(self.config.min_touch_target_size)
-        self.results: List[AccessibilityTestResult] = []
+        self.results: list[AccessibilityTestResult] = []
 
-    def run_accessibility_tests(self, screenshot_paths: List[str]) -> List[AccessibilityTestResult]:
+    def run_accessibility_tests(self, screenshot_paths: list[str]) -> list[AccessibilityTestResult]:
         """Run accessibility tests on screenshots"""
         self.results = []
 
@@ -272,53 +276,64 @@ class AccessibilityTestRunner:
 
         return self.results
 
-    def _test_screenshot_accessibility(self, screenshot_path: str) -> Optional[AccessibilityTestResult]:
+    def _test_screenshot_accessibility(
+        self, screenshot_path: str
+    ) -> AccessibilityTestResult | None:
         """Test accessibility of a single screenshot"""
         try:
-            test_name = os.path.basename(screenshot_path).replace('.png', '')
+            test_name = os.path.basename(screenshot_path).replace(".png", "")
             issues = []
             recommendations = []
 
             with Image.open(screenshot_path) as img:
                 # Test 1: Color contrast
                 contrast_result = self._test_color_contrast(img)
-                contrast_ratio = contrast_result['min_contrast_ratio']
+                contrast_ratio = contrast_result["min_contrast_ratio"]
                 contrast_passed = contrast_ratio >= self.config.min_contrast_ratio
 
                 if not contrast_passed:
-                    issues.extend(contrast_result['issues'])
-                    recommendations.extend(contrast_result['recommendations'])
+                    issues.extend(contrast_result["issues"])
+                    recommendations.extend(contrast_result["recommendations"])
 
                 # Test 2: Color blindness safety
                 colorblind_result = self._test_color_blindness_safety(img)
-                colorblind_passed = colorblind_result['safe']
+                colorblind_passed = colorblind_result["safe"]
 
                 if not colorblind_passed:
-                    issues.extend(colorblind_result['issues'])
-                    recommendations.extend(colorblind_result['recommendations'])
+                    issues.extend(colorblind_result["issues"])
+                    recommendations.extend(colorblind_result["recommendations"])
 
                 # Test 3: Low vision compliance
                 low_vision_result = self._test_low_vision_compliance(img)
-                low_vision_passed = low_vision_result['compliant']
+                low_vision_passed = low_vision_result["compliant"]
 
                 if not low_vision_passed:
-                    issues.extend(low_vision_result['issues'])
-                    recommendations.extend(low_vision_result['recommendations'])
+                    issues.extend(low_vision_result["issues"])
+                    recommendations.extend(low_vision_result["recommendations"])
 
                 # Test 4: Touch targets
                 touch_result = self.touch_analyzer.analyze_touch_targets(img)
-                touch_passed = touch_result['all_targets_adequate']
+                touch_passed = touch_result["all_targets_adequate"]
 
                 if not touch_passed:
-                    issues.extend(touch_result['issues'])
-                    recommendations.append("Increase size of small touch targets to at least 44x44px")
+                    issues.extend(touch_result["issues"])
+                    recommendations.append(
+                        "Increase size of small touch targets to at least 44x44px"
+                    )
 
                 # Determine WCAG compliance level
-                wcag_level = self._determine_wcag_level(contrast_ratio, contrast_passed,
-                                                      colorblind_passed, low_vision_passed, touch_passed)
+                wcag_level = self._determine_wcag_level(
+                    contrast_ratio,
+                    contrast_passed,
+                    colorblind_passed,
+                    low_vision_passed,
+                    touch_passed,
+                )
 
                 # Overall pass/fail
-                overall_passed = contrast_passed and colorblind_passed and low_vision_passed and touch_passed
+                overall_passed = (
+                    contrast_passed and colorblind_passed and low_vision_passed and touch_passed
+                )
 
                 return AccessibilityTestResult(
                     test_name=test_name,
@@ -329,14 +344,14 @@ class AccessibilityTestRunner:
                     touch_targets_adequate=touch_passed,
                     issues=issues,
                     recommendations=recommendations,
-                    wcag_level=wcag_level
+                    wcag_level=wcag_level,
                 )
 
         except Exception as e:
             logger.error(f"Accessibility test failed for {screenshot_path}: {e}")
             return None
 
-    def _test_color_contrast(self, img: Image.Image) -> Dict:
+    def _test_color_contrast(self, img: Image.Image) -> dict:
         """Test color contrast ratios"""
         # Sample the image to find text/background combinations
         width, height = img.size
@@ -361,35 +376,43 @@ class AccessibilityTestRunner:
 
                     # Find min/max colors in area (likely text and background)
                     if area_colors:
-                        min_luminance_color = min(area_colors, key=self.color_analyzer.rgb_to_luminance)
-                        max_luminance_color = max(area_colors, key=self.color_analyzer.rgb_to_luminance)
+                        min_luminance_color = min(
+                            area_colors, key=self.color_analyzer.rgb_to_luminance
+                        )
+                        max_luminance_color = max(
+                            area_colors, key=self.color_analyzer.rgb_to_luminance
+                        )
 
                         if min_luminance_color != max_luminance_color:
-                            ratio = self.color_analyzer.contrast_ratio(min_luminance_color, max_luminance_color)
+                            ratio = self.color_analyzer.contrast_ratio(
+                                min_luminance_color, max_luminance_color
+                            )
                             contrasts.append(ratio)
 
         min_contrast = min(contrasts) if contrasts else 1.0
         avg_contrast = sum(contrasts) / len(contrasts) if contrasts else 1.0
 
         if min_contrast < self.config.min_contrast_ratio:
-            issues.append(f"Insufficient color contrast: {min_contrast:.2f} (minimum: {self.config.min_contrast_ratio})")
+            issues.append(
+                f"Insufficient color contrast: {min_contrast:.2f} (minimum: {self.config.min_contrast_ratio})"
+            )
             recommendations.append("Increase contrast between text and background colors")
 
         return {
-            'min_contrast_ratio': min_contrast,
-            'avg_contrast_ratio': avg_contrast,
-            'all_contrasts': contrasts,
-            'issues': issues,
-            'recommendations': recommendations
+            "min_contrast_ratio": min_contrast,
+            "avg_contrast_ratio": avg_contrast,
+            "all_contrasts": contrasts,
+            "issues": issues,
+            "recommendations": recommendations,
         }
 
-    def _test_color_blindness_safety(self, img: Image.Image) -> Dict:
+    def _test_color_blindness_safety(self, img: Image.Image) -> dict:
         """Test color blindness safety"""
         issues = []
         recommendations = []
 
         if not self.config.test_color_blindness:
-            return {'safe': True, 'issues': [], 'recommendations': []}
+            return {"safe": True, "issues": [], "recommendations": []}
 
         # Sample colors from the image
         width, height = img.size
@@ -409,32 +432,37 @@ class AccessibilityTestRunner:
         problematic_pairs = []
 
         for i, color1 in enumerate(colors_list):
-            for color2 in colors_list[i+1:]:
+            for color2 in colors_list[i + 1 :]:
                 if not self.color_analyzer.is_color_distinguishable(
-                    color1, color2, self.config.max_color_difference_threshold):
+                    color1, color2, self.config.max_color_difference_threshold
+                ):
                     problematic_pairs.append((color1, color2))
 
         safe = len(problematic_pairs) == 0
 
         if not safe:
-            issues.append(f"Found {len(problematic_pairs)} color pairs that may be indistinguishable to color blind users")
-            recommendations.append("Use patterns, textures, or additional visual cues beyond color alone")
+            issues.append(
+                f"Found {len(problematic_pairs)} color pairs that may be indistinguishable to color blind users"
+            )
+            recommendations.append(
+                "Use patterns, textures, or additional visual cues beyond color alone"
+            )
             recommendations.append("Test interface with color blindness simulators")
 
         return {
-            'safe': safe,
-            'problematic_pairs': problematic_pairs,
-            'issues': issues,
-            'recommendations': recommendations
+            "safe": safe,
+            "problematic_pairs": problematic_pairs,
+            "issues": issues,
+            "recommendations": recommendations,
         }
 
-    def _test_low_vision_compliance(self, img: Image.Image) -> Dict:
+    def _test_low_vision_compliance(self, img: Image.Image) -> dict:
         """Test compliance for low vision users"""
         issues = []
         recommendations = []
 
         if not self.config.test_low_vision:
-            return {'compliant': True, 'issues': [], 'recommendations': []}
+            return {"compliant": True, "issues": [], "recommendations": []}
 
         # Test 1: High contrast mode simulation
         high_contrast_img = self._simulate_high_contrast(img)
@@ -463,28 +491,28 @@ class AccessibilityTestRunner:
             recommendations.append("Increase font sizes and improve contrast")
 
         return {
-            'compliant': compliant,
-            'high_contrast_readable': hc_readable,
-            'magnification_readable': mag_readable,
-            'blur_readable': blur_readable,
-            'issues': issues,
-            'recommendations': recommendations
+            "compliant": compliant,
+            "high_contrast_readable": hc_readable,
+            "magnification_readable": mag_readable,
+            "blur_readable": blur_readable,
+            "issues": issues,
+            "recommendations": recommendations,
         }
 
     def _simulate_high_contrast(self, img: Image.Image) -> Image.Image:
         """Simulate high contrast mode"""
         # Convert to grayscale and enhance contrast
-        gray = img.convert('L')
+        gray = img.convert("L")
         enhancer = ImageEnhance.Contrast(gray)
         high_contrast = enhancer.enhance(3.0)  # Increase contrast significantly
 
         # Convert back to RGB
-        return high_contrast.convert('RGB')
+        return high_contrast.convert("RGB")
 
     def _is_content_readable(self, img: Image.Image) -> bool:
         """Check if content is readable (simplified heuristic)"""
         # Convert to grayscale for analysis
-        gray = img.convert('L')
+        gray = img.convert("L")
         width, height = gray.size
 
         # Sample the image and check for text-like patterns
@@ -509,11 +537,22 @@ class AccessibilityTestRunner:
         # If sufficient text-like areas found, consider readable
         return text_indicators > sample_size * 0.05
 
-    def _determine_wcag_level(self, contrast_ratio: float, contrast_passed: bool,
-                            colorblind_passed: bool, low_vision_passed: bool,
-                            touch_passed: bool) -> str:
+    def _determine_wcag_level(
+        self,
+        contrast_ratio: float,
+        contrast_passed: bool,
+        colorblind_passed: bool,
+        low_vision_passed: bool,
+        touch_passed: bool,
+    ) -> str:
         """Determine WCAG compliance level"""
-        if contrast_ratio >= 7.0 and contrast_passed and colorblind_passed and low_vision_passed and touch_passed:
+        if (
+            contrast_ratio >= 7.0
+            and contrast_passed
+            and colorblind_passed
+            and low_vision_passed
+            and touch_passed
+        ):
             return "AAA"
         elif contrast_ratio >= 4.5 and contrast_passed and colorblind_passed:
             return "AA"
@@ -522,24 +561,26 @@ class AccessibilityTestRunner:
         else:
             return "Non-compliant"
 
-    def generate_accessibility_report(self, output_path: str = "tests/visual/accessibility_report.json") -> Dict:
+    def generate_accessibility_report(
+        self, output_path: str = "tests/visual/accessibility_report.json"
+    ) -> dict:
         """Generate accessibility test report"""
         summary = {
-            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'total_tests': len(self.results),
-            'passed_tests': sum(1 for r in self.results if r.passed),
-            'failed_tests': sum(1 for r in self.results if not r.passed),
-            'wcag_levels': {},
-            'common_issues': {},
-            'recommendations': []
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "total_tests": len(self.results),
+            "passed_tests": sum(1 for r in self.results if r.passed),
+            "failed_tests": sum(1 for r in self.results if not r.passed),
+            "wcag_levels": {},
+            "common_issues": {},
+            "recommendations": [],
         }
 
         # Analyze WCAG levels
         for result in self.results:
             level = result.wcag_level
-            if level not in summary['wcag_levels']:
-                summary['wcag_levels'][level] = 0
-            summary['wcag_levels'][level] += 1
+            if level not in summary["wcag_levels"]:
+                summary["wcag_levels"][level] = 0
+            summary["wcag_levels"][level] += 1
 
         # Collect common issues
         all_issues = []
@@ -551,32 +592,34 @@ class AccessibilityTestRunner:
 
         # Count issue frequency
         for issue in all_issues:
-            if issue not in summary['common_issues']:
-                summary['common_issues'][issue] = 0
-            summary['common_issues'][issue] += 1
+            if issue not in summary["common_issues"]:
+                summary["common_issues"][issue] = 0
+            summary["common_issues"][issue] += 1
 
         # Get unique recommendations
-        summary['recommendations'] = list(set(all_recommendations))
+        summary["recommendations"] = list(set(all_recommendations))
 
         # Full report
         report = {
-            'summary': summary,
-            'config': asdict(self.config),
-            'detailed_results': [asdict(result) for result in self.results]
+            "summary": summary,
+            "config": asdict(self.config),
+            "detailed_results": [asdict(result) for result in self.results],
         }
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(report, f, indent=2)
 
         logger.info(f"Accessibility report generated: {output_path}")
         return report
+
 
 # Pytest integration
 @pytest.fixture
 def accessibility_test_runner():
     """Pytest fixture for accessibility test runner"""
     return AccessibilityTestRunner()
+
 
 def test_color_contrast_compliance(accessibility_test_runner):
     """Test color contrast compliance"""
@@ -585,7 +628,10 @@ def test_color_contrast_compliance(accessibility_test_runner):
     results = accessibility_test_runner.run_accessibility_tests(sample_screenshots)
 
     for result in results:
-        assert result.contrast_ratio >= 4.5, f"Insufficient contrast in {result.test_name}: {result.contrast_ratio}"
+        assert (
+            result.contrast_ratio >= 4.5
+        ), f"Insufficient contrast in {result.test_name}: {result.contrast_ratio}"
+
 
 def test_color_blindness_safety(accessibility_test_runner):
     """Test color blindness safety"""
@@ -595,13 +641,18 @@ def test_color_blindness_safety(accessibility_test_runner):
     for result in results:
         assert result.color_blind_safe, f"Not color blind safe: {result.test_name}"
 
+
 def test_wcag_aa_compliance(accessibility_test_runner):
     """Test WCAG AA compliance"""
     sample_screenshots = ["tests/visual/screenshots/main_window_default.png"]
     results = accessibility_test_runner.run_accessibility_tests(sample_screenshots)
 
     for result in results:
-        assert result.wcag_level in ["AA", "AAA"], f"Does not meet WCAG AA: {result.test_name} ({result.wcag_level})"
+        assert result.wcag_level in [
+            "AA",
+            "AAA",
+        ], f"Does not meet WCAG AA: {result.test_name} ({result.wcag_level})"
+
 
 if __name__ == "__main__":
     # Run accessibility tests directly
@@ -610,21 +661,25 @@ if __name__ == "__main__":
     # Test with sample screenshots (would be actual screenshots in real use)
     sample_screenshots = [
         "tests/visual/screenshots/main_window_default.png",
-        "tests/visual/screenshots/connection_dialog.png"
+        "tests/visual/screenshots/connection_dialog.png",
     ]
 
     results = runner.run_accessibility_tests(sample_screenshots)
     report = runner.generate_accessibility_report()
 
-    print(f"Accessibility tests completed: {report['summary']['passed_tests']}/{report['summary']['total_tests']} passed")
+    print(
+        f"Accessibility tests completed: {report['summary']['passed_tests']}/{report['summary']['total_tests']} passed"
+    )
     print(f"WCAG levels: {report['summary']['wcag_levels']}")
 
-    if report['summary']['common_issues']:
+    if report["summary"]["common_issues"]:
         print("\nCommon issues:")
-        for issue, count in sorted(report['summary']['common_issues'].items(), key=lambda x: x[1], reverse=True):
+        for issue, count in sorted(
+            report["summary"]["common_issues"].items(), key=lambda x: x[1], reverse=True
+        ):
             print(f"  {issue} ({count} occurrences)")
 
-    if report['summary']['recommendations']:
-        print(f"\nRecommendations:")
-        for rec in report['summary']['recommendations'][:5]:
+    if report["summary"]["recommendations"]:
+        print("\nRecommendations:")
+        for rec in report["summary"]["recommendations"][:5]:
             print(f"  - {rec}")

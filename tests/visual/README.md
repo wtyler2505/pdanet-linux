@@ -62,7 +62,7 @@ tests/visual/
 
 ```bash
 # Install system dependencies (Ubuntu/Debian)
-sudo apt-get install xvfb gnome-screenshot python3-gi gir1.2-gtk-3.0
+sudo apt-get install xvfb gnome-screenshot imagemagick x11-utils python3-gi gir1.2-gtk-3.0
 
 # Install Python dependencies
 pip install -r requirements.txt
@@ -108,10 +108,10 @@ pytest tests/visual/test_components.py -v -m visual
 
 ```bash
 # Create initial baselines (first run)
-python visual_test_runner.py --all --create-baselines
+PDANET_UPDATE_BASELINES=1 python visual_test_runner.py --all --create-baselines
 
 # Update baselines after approved changes
-python visual_test_runner.py --all --update-baselines
+PDANET_UPDATE_BASELINES=1 python visual_test_runner.py --all --update-baselines
 ```
 
 ## Configuration

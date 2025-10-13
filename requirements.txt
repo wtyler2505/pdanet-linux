@@ -1,7 +1,7 @@
 # PdaNet Linux - Python Dependencies
 
-# GUI Framework
-PyGObject>=3.42.0  # GTK3 bindings for Python
+# GUI Framework (installed via system packages: python3-gi)
+# NOTE: Do not install PyGObject via pip here; use your distro package.
 
 # Development Tools
 black>=23.0.0  # Code formatter (used by .claude/hooks)
@@ -10,6 +10,24 @@ flake8>=6.0.0  # Linter (used by .claude/hooks)
 mypy>=1.0.0  # Type checker (used by .claude/hooks)
 pytest>=7.0.0  # Test framework (used by .claude/hooks)
 pytest-cov>=4.0.0  # Coverage reporting
+
+# Runtime additions
+keyring>=24.0.0  # System keyring for secure storage
+numpy>=1.24.0  # Vectorized operations for tests/visual
+mss>=9.0.1  # Headless screenshot capture compatible with Xvfb
+
+# Visual regression/testing extras
+pytest-regressions>=2.5.0  # Snapshot/image regression helper
+ImageHash>=4.3.1  # Perceptual hashing for images
+scikit-image>=0.22.0  # Optional: SSIM for perceptual similarity (heavy; optional)
+python-xlib>=0.33  # Needed by MSS on X11
+
+# Tooling and security
+ruff>=0.5.0  # Fast linter
+pre-commit>=3.7.0  # Git hooks
+pip-tools>=7.4.0  # Locking/compiling requirements
+bandit>=1.7.8  # Security static analysis
+pip-audit>=2.7.3  # Dependency vulnerability scanning
 
 # MCP Server (optional - for Jupyter integration)
 jupyter-mcp-server>=0.14.0  # Jupyter MCP server for notebook integration

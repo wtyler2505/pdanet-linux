@@ -8,6 +8,8 @@ Reverse-engineered Linux client for PdaNet+ USB/WiFi tethering with multi-layere
 
 PdaNet Linux provides system-wide internet connectivity through Android devices running PdaNet+. Unlike simple proxy configurations, this implementation uses transparent traffic redirection to ensure ALL applications use the tethered connection seamlessly.
 
+📘 Contributor guide: see [Repository Guidelines](AGENTS.md) for structure, tooling, and PR expectations.
+
 **Primary Feature:** WiFi hotspot tethering with **6-layer aggressive carrier detection bypass** to hide tethering usage from mobile carriers.
 
 ## Key Features

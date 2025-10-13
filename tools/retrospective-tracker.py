@@ -4,20 +4,19 @@ Retrospective Tracking System
 Automated collection and analysis of development metrics for continuous improvement
 """
 
+import argparse
 import json
-import os
 import subprocess
 import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass, asdict
-import argparse
 
 
 @dataclass
 class CodeMetrics:
     """Code quality and structure metrics"""
+
     total_lines: int
     source_lines: int
     test_lines: int
@@ -37,6 +36,7 @@ class CodeMetrics:
 @dataclass
 class QualityMetrics:
     """Quality and technical debt metrics"""
+
     todo_items: int
     fixme_items: int
     technical_debt_ratio: float
@@ -50,6 +50,7 @@ class QualityMetrics:
 @dataclass
 class ProcessMetrics:
     """Development process effectiveness metrics"""
+
     automation_coverage: float
     quality_gate_count: int
     ci_integration_score: float
@@ -60,15 +61,16 @@ class ProcessMetrics:
 @dataclass
 class RetrospectiveSnapshot:
     """Complete retrospective snapshot for a point in time"""
+
     timestamp: str
     sprint_id: str
     code_metrics: CodeMetrics
     quality_metrics: QualityMetrics
     process_metrics: ProcessMetrics
     overall_health_score: float
-    key_achievements: List[str]
-    improvement_areas: List[str]
-    action_items: List[str]
+    key_achievements: list[str]
+    improvement_areas: list[str]
+    action_items: list[str]
 
 
 class RetrospectiveTracker:
@@ -120,7 +122,7 @@ class RetrospectiveTracker:
             imports=imports,
             avg_file_size=avg_file_size,
             test_coverage_ratio=test_coverage_ratio,
-            docs_to_code_ratio=docs_to_code_ratio
+            docs_to_code_ratio=docs_to_code_ratio,
         )
 
     def collect_quality_metrics(self) -> QualityMetrics:
@@ -153,7 +155,7 @@ class RetrospectiveTracker:
             import_statements=import_statements,
             code_complexity_score=code_complexity_score,
             automation_hooks=automation_hooks,
-            documentation_files=documentation_files
+            documentation_files=documentation_files,
         )
 
     def collect_process_metrics(self) -> ProcessMetrics:
@@ -180,36 +182,46 @@ class RetrospectiveTracker:
             quality_gate_count=quality_gate_count,
             ci_integration_score=ci_integration_score,
             workflow_efficiency=workflow_efficiency,
-            knowledge_sharing_score=knowledge_sharing_score
+            knowledge_sharing_score=knowledge_sharing_score,
         )
 
-    def calculate_health_score(self, code: CodeMetrics, quality: QualityMetrics,
-                             process: ProcessMetrics) -> float:
+    def calculate_health_score(
+        self, code: CodeMetrics, quality: QualityMetrics, process: ProcessMetrics
+    ) -> float:
         """Calculate overall project health score"""
 
         # Code quality score (0-30 points)
-        code_score = min(30, (
-            min(20, code.test_coverage_ratio * 20) +  # Test coverage
-            min(10, code.docs_to_code_ratio * 2)      # Documentation ratio
-        ))
+        code_score = min(
+            30,
+            (
+                min(20, code.test_coverage_ratio * 20)  # Test coverage
+                + min(10, code.docs_to_code_ratio * 2)  # Documentation ratio
+            ),
+        )
 
         # Quality score (0-35 points)
-        quality_score = min(35, (
-            max(0, 15 - quality.technical_debt_ratio * 1000) +  # Low technical debt
-            min(10, quality.test_methods / 10) +                # Test methods
-            min(10, quality.automation_hooks * 2)               # Automation
-        ))
+        quality_score = min(
+            35,
+            (
+                max(0, 15 - quality.technical_debt_ratio * 1000)  # Low technical debt
+                + min(10, quality.test_methods / 10)  # Test methods
+                + min(10, quality.automation_hooks * 2)  # Automation
+            ),
+        )
 
         # Process score (0-35 points)
-        process_score = min(35, (
-            process.automation_coverage * 15 +      # Automation coverage
-            process.workflow_efficiency * 10 +      # Workflow efficiency
-            min(10, process.knowledge_sharing_score / 10)  # Knowledge sharing
-        ))
+        process_score = min(
+            35,
+            (
+                process.automation_coverage * 15  # Automation coverage
+                + process.workflow_efficiency * 10  # Workflow efficiency
+                + min(10, process.knowledge_sharing_score / 10)  # Knowledge sharing
+            ),
+        )
 
         return min(100, code_score + quality_score + process_score)
 
-    def create_snapshot(self, sprint_id: Optional[str] = None) -> RetrospectiveSnapshot:
+    def create_snapshot(self, sprint_id: str | None = None) -> RetrospectiveSnapshot:
         """Create a complete retrospective snapshot"""
 
         if not sprint_id:
@@ -235,7 +247,7 @@ class RetrospectiveTracker:
             overall_health_score=health_score,
             key_achievements=achievements,
             improvement_areas=improvements,
-            action_items=actions
+            action_items=actions,
         )
 
     def save_snapshot(self, snapshot: RetrospectiveSnapshot) -> str:
@@ -243,30 +255,30 @@ class RetrospectiveTracker:
         filename = f"retrospective_{snapshot.sprint_id}_{int(time.time())}.json"
         filepath = self.data_dir / filename
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(asdict(snapshot), f, indent=2)
 
         return str(filepath)
 
-    def load_snapshots(self, limit: Optional[int] = None) -> List[RetrospectiveSnapshot]:
+    def load_snapshots(self, limit: int | None = None) -> list[RetrospectiveSnapshot]:
         """Load historical snapshots"""
         snapshots = []
 
         for filepath in sorted(self.data_dir.glob("retrospective_*.json")):
             try:
-                with open(filepath, 'r') as f:
+                with open(filepath) as f:
                     data = json.load(f)
                     # Reconstruct dataclasses
                     snapshot = RetrospectiveSnapshot(
-                        timestamp=data['timestamp'],
-                        sprint_id=data['sprint_id'],
-                        code_metrics=CodeMetrics(**data['code_metrics']),
-                        quality_metrics=QualityMetrics(**data['quality_metrics']),
-                        process_metrics=ProcessMetrics(**data['process_metrics']),
-                        overall_health_score=data['overall_health_score'],
-                        key_achievements=data['key_achievements'],
-                        improvement_areas=data['improvement_areas'],
-                        action_items=data['action_items']
+                        timestamp=data["timestamp"],
+                        sprint_id=data["sprint_id"],
+                        code_metrics=CodeMetrics(**data["code_metrics"]),
+                        quality_metrics=QualityMetrics(**data["quality_metrics"]),
+                        process_metrics=ProcessMetrics(**data["process_metrics"]),
+                        overall_health_score=data["overall_health_score"],
+                        key_achievements=data["key_achievements"],
+                        improvement_areas=data["improvement_areas"],
+                        action_items=data["action_items"],
                     )
                     snapshots.append(snapshot)
             except Exception as e:
@@ -277,7 +289,7 @@ class RetrospectiveTracker:
 
         return snapshots
 
-    def generate_trend_analysis(self, days: int = 30) -> Dict:
+    def generate_trend_analysis(self, days: int = 30) -> dict:
         """Generate trend analysis for recent snapshots"""
         snapshots = self.load_snapshots()
 
@@ -286,8 +298,7 @@ class RetrospectiveTracker:
 
         cutoff_date = datetime.now() - timedelta(days=days)
         recent_snapshots = [
-            s for s in snapshots
-            if datetime.fromisoformat(s.timestamp) >= cutoff_date
+            s for s in snapshots if datetime.fromisoformat(s.timestamp) >= cutoff_date
         ]
 
         if len(recent_snapshots) < 2:
@@ -299,10 +310,14 @@ class RetrospectiveTracker:
         return {
             "period": f"{len(recent_snapshots)} snapshots over {days} days",
             "health_score_trend": latest.overall_health_score - first.overall_health_score,
-            "test_coverage_trend": latest.code_metrics.test_coverage_ratio - first.code_metrics.test_coverage_ratio,
-            "technical_debt_trend": latest.quality_metrics.technical_debt_ratio - first.quality_metrics.technical_debt_ratio,
-            "documentation_trend": latest.code_metrics.docs_to_code_ratio - first.code_metrics.docs_to_code_ratio,
-            "automation_trend": latest.process_metrics.automation_coverage - first.process_metrics.automation_coverage
+            "test_coverage_trend": latest.code_metrics.test_coverage_ratio
+            - first.code_metrics.test_coverage_ratio,
+            "technical_debt_trend": latest.quality_metrics.technical_debt_ratio
+            - first.quality_metrics.technical_debt_ratio,
+            "documentation_trend": latest.code_metrics.docs_to_code_ratio
+            - first.code_metrics.docs_to_code_ratio,
+            "automation_trend": latest.process_metrics.automation_coverage
+            - first.process_metrics.automation_coverage,
         }
 
     # Helper methods
@@ -317,7 +332,7 @@ class RetrospectiveTracker:
 
         for file_path in search_path.rglob(pattern):
             try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                with open(file_path, encoding="utf-8", errors="ignore") as f:
                     total += len(f.readlines())
             except Exception:
                 continue
@@ -334,11 +349,14 @@ class RetrospectiveTracker:
 
         try:
             result = subprocess.run(
-                ['grep', '-r', pattern, str(search_path)],
-                capture_output=True, text=True, timeout=30
+                ["grep", "-r", pattern, str(search_path)],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
             if result.returncode == 0:
-                count = len(result.stdout.strip().split('\n'))
+                count = len(result.stdout.strip().split("\n"))
         except Exception:
             pass
 
@@ -352,10 +370,10 @@ class RetrospectiveTracker:
             return 0
 
         try:
-            with open(settings_file, 'r') as f:
+            with open(settings_file) as f:
                 settings = json.load(f)
                 hooks = 0
-                for hook_type in ['PreToolUse', 'PostToolUse', 'Stop']:
+                for hook_type in ["PreToolUse", "PostToolUse", "Stop"]:
                     if hook_type in settings:
                         hooks += len(settings[hook_type])
                 return hooks
@@ -414,8 +432,9 @@ class RetrospectiveTracker:
 
         return sum(factors) / len(factors)
 
-    def _identify_achievements(self, code: CodeMetrics, quality: QualityMetrics,
-                            process: ProcessMetrics) -> List[str]:
+    def _identify_achievements(
+        self, code: CodeMetrics, quality: QualityMetrics, process: ProcessMetrics
+    ) -> list[str]:
         """Identify key achievements based on metrics"""
         achievements = []
 
@@ -436,8 +455,9 @@ class RetrospectiveTracker:
 
         return achievements
 
-    def _identify_improvements(self, code: CodeMetrics, quality: QualityMetrics,
-                            process: ProcessMetrics) -> List[str]:
+    def _identify_improvements(
+        self, code: CodeMetrics, quality: QualityMetrics, process: ProcessMetrics
+    ) -> list[str]:
         """Identify improvement areas based on metrics"""
         improvements = []
 
@@ -458,8 +478,9 @@ class RetrospectiveTracker:
 
         return improvements
 
-    def _generate_action_items(self, code: CodeMetrics, quality: QualityMetrics,
-                             process: ProcessMetrics) -> List[str]:
+    def _generate_action_items(
+        self, code: CodeMetrics, quality: QualityMetrics, process: ProcessMetrics
+    ) -> list[str]:
         """Generate specific action items"""
         actions = []
 
@@ -483,8 +504,12 @@ def main():
     parser = argparse.ArgumentParser(description="Retrospective Tracking System")
     parser.add_argument("project_root", help="Project root directory")
     parser.add_argument("--sprint-id", help="Sprint identifier")
-    parser.add_argument("--action", choices=["snapshot", "trends", "report"],
-                       default="snapshot", help="Action to perform")
+    parser.add_argument(
+        "--action",
+        choices=["snapshot", "trends", "report"],
+        default="snapshot",
+        help="Action to perform",
+    )
     parser.add_argument("--days", type=int, default=30, help="Days for trend analysis")
 
     args = parser.parse_args()

@@ -4,13 +4,13 @@ Unit tests for ConnectionManager
 Tests state machine, auto-reconnect, and connection orchestration
 """
 
-import unittest
-from unittest.mock import Mock, patch, MagicMock
-import sys
 import os
+import sys
+import unittest
+from unittest.mock import Mock, patch
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from connection_manager import ConnectionManager, ConnectionState
 
@@ -20,9 +20,11 @@ class TestConnectionManager(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        with patch('connection_manager.get_logger'), \
-             patch('connection_manager.get_stats'), \
-             patch('connection_manager.get_config'):
+        with (
+            patch("connection_manager.get_logger"),
+            patch("connection_manager.get_stats"),
+            patch("connection_manager.get_config"),
+        ):
             self.manager = ConnectionManager()
 
     def test_initial_state(self):
@@ -60,7 +62,7 @@ class TestConnectionManager(unittest.TestCase):
         self.assertEqual(self.manager.max_reconnect_attempts, 3)
         self.assertEqual(self.manager.reconnect_delay, 5)
 
-    @patch('connection_manager.subprocess.run')
+    @patch("connection_manager.subprocess.run")
     def test_detect_usb_interface(self, mock_run):
         """Test USB interface detection"""
         # Mock successful USB interface detection
@@ -69,7 +71,7 @@ class TestConnectionManager(unittest.TestCase):
         interface = self.manager._detect_usb_interface()
         self.assertEqual(interface, "usb0")
 
-    @patch('connection_manager.subprocess.run')
+    @patch("connection_manager.subprocess.run")
     def test_detect_wifi_interface(self, mock_run):
         """Test WiFi interface detection"""
         # Mock successful WiFi interface detection
@@ -92,5 +94,5 @@ class TestConnectionManager(unittest.TestCase):
         self.assertEqual(callback_called[0], ConnectionState.CONNECTING)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

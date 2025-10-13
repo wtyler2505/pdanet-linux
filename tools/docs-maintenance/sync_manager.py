@@ -4,21 +4,20 @@ PdaNet Linux - Documentation Synchronization Manager
 Git-based documentation synchronization and version control integration
 """
 
-import os
 import json
 import subprocess
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Tuple, Optional, Set
-from dataclasses import dataclass, asdict
+from pathlib import Path
 
 
 @dataclass
 class FileChange:
     """Represents a file change in the documentation"""
+
     file_path: str
     change_type: str  # 'added', 'modified', 'deleted', 'renamed'
-    old_path: Optional[str]  # For renamed files
+    old_path: str | None  # For renamed files
     lines_added: int
     lines_deleted: int
     last_modified: str
@@ -29,27 +28,29 @@ class FileChange:
 @dataclass
 class SyncStatus:
     """Documentation synchronization status"""
+
     is_git_repo: bool
     branch: str
     has_uncommitted_changes: bool
-    files_to_commit: List[str]
+    files_to_commit: list[str]
     last_commit: str
     commits_ahead: int
     commits_behind: int
-    sync_conflicts: List[str]
+    sync_conflicts: list[str]
 
 
 @dataclass
 class SyncReport:
     """Documentation synchronization report"""
+
     timestamp: str
     sync_status: SyncStatus
-    recent_changes: List[FileChange]
-    outdated_files: List[str]
-    missing_files: List[str]
-    recommendations: List[str]
+    recent_changes: list[FileChange]
+    outdated_files: list[str]
+    missing_files: list[str]
+    recommendations: list[str]
     auto_sync_enabled: bool
-    last_sync: Optional[str]
+    last_sync: str | None
 
 
 class DocumentationSyncManager:
@@ -57,24 +58,29 @@ class DocumentationSyncManager:
 
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        self.git_dir = self.project_root / '.git'
+        self.git_dir = self.project_root / ".git"
 
         # Documentation patterns to track
         self.doc_patterns = [
-            '*.md', '*.txt', '*.rst',
-            'README*', 'CHANGELOG*', 'LICENSE*',
-            'docs/**/*', 'ref/**/*'
+            "*.md",
+            "*.txt",
+            "*.rst",
+            "README*",
+            "CHANGELOG*",
+            "LICENSE*",
+            "docs/**/*",
+            "ref/**/*",
         ]
 
         # Files to ignore in sync operations
         self.ignore_patterns = [
-            '**/.git/**',
-            '**/node_modules/**',
-            '**/__pycache__/**',
-            '**/venv/**',
-            '**/env/**',
-            '**/.claude/**',  # Except for documentation within
-            '**/tools/docs-maintenance/reports/**'  # Generated reports
+            "**/.git/**",
+            "**/node_modules/**",
+            "**/__pycache__/**",
+            "**/venv/**",
+            "**/env/**",
+            "**/.claude/**",  # Except for documentation within
+            "**/tools/docs-maintenance/reports/**",  # Generated reports
         ]
 
     def is_git_repository(self) -> bool:
@@ -86,51 +92,59 @@ class DocumentationSyncManager:
         if not self.is_git_repository():
             return SyncStatus(
                 is_git_repo=False,
-                branch='',
+                branch="",
                 has_uncommitted_changes=False,
                 files_to_commit=[],
-                last_commit='',
+                last_commit="",
                 commits_ahead=0,
                 commits_behind=0,
-                sync_conflicts=[]
+                sync_conflicts=[],
             )
 
         try:
             # Get current branch
             branch_result = subprocess.run(
-                ['git', 'branch', '--show-current'],
+                ["git", "branch", "--show-current"],
+                check=False,
                 cwd=self.project_root,
                 capture_output=True,
-                text=True
+                text=True,
             )
-            branch = branch_result.stdout.strip() if branch_result.returncode == 0 else 'unknown'
+            branch = branch_result.stdout.strip() if branch_result.returncode == 0 else "unknown"
 
             # Get status
             status_result = subprocess.run(
-                ['git', 'status', '--porcelain'],
+                ["git", "status", "--porcelain"],
+                check=False,
                 cwd=self.project_root,
                 capture_output=True,
-                text=True
+                text=True,
             )
 
             files_to_commit = []
             if status_result.returncode == 0:
-                for line in status_result.stdout.strip().split('\n'):
+                for line in status_result.stdout.strip().split("\n"):
                     if line.strip():
                         # Parse git status format
                         status_code = line[:2]
                         file_path = line[3:]
-                        if any(self._matches_pattern(file_path, pattern) for pattern in self.doc_patterns):
+                        if any(
+                            self._matches_pattern(file_path, pattern)
+                            for pattern in self.doc_patterns
+                        ):
                             files_to_commit.append(file_path)
 
             # Get last commit
             last_commit_result = subprocess.run(
-                ['git', 'log', '-1', '--format=%H %s'],
+                ["git", "log", "-1", "--format=%H %s"],
+                check=False,
                 cwd=self.project_root,
                 capture_output=True,
-                text=True
+                text=True,
             )
-            last_commit = last_commit_result.stdout.strip() if last_commit_result.returncode == 0 else ''
+            last_commit = (
+                last_commit_result.stdout.strip() if last_commit_result.returncode == 0 else ""
+            )
 
             # Check remote status
             commits_ahead = 0
@@ -138,27 +152,30 @@ class DocumentationSyncManager:
             try:
                 # Fetch latest from remote
                 subprocess.run(
-                    ['git', 'fetch'],
+                    ["git", "fetch"],
+                    check=False,
                     cwd=self.project_root,
                     capture_output=True,
-                    timeout=30
+                    timeout=30,
                 )
 
                 # Count commits ahead/behind
                 ahead_result = subprocess.run(
-                    ['git', 'rev-list', '--count', f'origin/{branch}..HEAD'],
+                    ["git", "rev-list", "--count", f"origin/{branch}..HEAD"],
+                    check=False,
                     cwd=self.project_root,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 if ahead_result.returncode == 0:
                     commits_ahead = int(ahead_result.stdout.strip() or 0)
 
                 behind_result = subprocess.run(
-                    ['git', 'rev-list', '--count', f'HEAD..origin/{branch}'],
+                    ["git", "rev-list", "--count", f"HEAD..origin/{branch}"],
+                    check=False,
                     cwd=self.project_root,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 if behind_result.returncode == 0:
                     commits_behind = int(behind_result.stdout.strip() or 0)
@@ -168,14 +185,17 @@ class DocumentationSyncManager:
 
             # Check for merge conflicts
             conflict_result = subprocess.run(
-                ['git', 'diff', '--name-only', '--diff-filter=U'],
+                ["git", "diff", "--name-only", "--diff-filter=U"],
+                check=False,
                 cwd=self.project_root,
                 capture_output=True,
-                text=True
+                text=True,
             )
             sync_conflicts = []
             if conflict_result.returncode == 0:
-                sync_conflicts = [f for f in conflict_result.stdout.strip().split('\n') if f.strip()]
+                sync_conflicts = [
+                    f for f in conflict_result.stdout.strip().split("\n") if f.strip()
+                ]
 
             return SyncStatus(
                 is_git_repo=True,
@@ -185,23 +205,23 @@ class DocumentationSyncManager:
                 last_commit=last_commit,
                 commits_ahead=commits_ahead,
                 commits_behind=commits_behind,
-                sync_conflicts=sync_conflicts
+                sync_conflicts=sync_conflicts,
             )
 
         except Exception as e:
             print(f"Error getting git status: {e}")
             return SyncStatus(
                 is_git_repo=True,
-                branch='error',
+                branch="error",
                 has_uncommitted_changes=False,
                 files_to_commit=[],
-                last_commit='',
+                last_commit="",
                 commits_ahead=0,
                 commits_behind=0,
-                sync_conflicts=[]
+                sync_conflicts=[],
             )
 
-    def get_recent_documentation_changes(self, days: int = 30) -> List[FileChange]:
+    def get_recent_documentation_changes(self, days: int = 30) -> list[FileChange]:
         """Get recent changes to documentation files"""
         if not self.is_git_repository():
             return []
@@ -213,14 +233,13 @@ class DocumentationSyncManager:
             since_date = datetime.now().strftime(f'--since="{days} days ago"')
 
             for pattern in self.doc_patterns:
-                log_result = subprocess.run([
-                    'git', 'log',
-                    '--oneline',
-                    '--name-status',
-                    since_date,
-                    '--',
-                    pattern
-                ], cwd=self.project_root, capture_output=True, text=True)
+                log_result = subprocess.run(
+                    ["git", "log", "--oneline", "--name-status", since_date, "--", pattern],
+                    check=False,
+                    cwd=self.project_root,
+                    capture_output=True,
+                    text=True,
+                )
 
                 if log_result.returncode == 0:
                     changes.extend(self._parse_git_log(log_result.stdout))
@@ -230,10 +249,10 @@ class DocumentationSyncManager:
 
         return changes
 
-    def _parse_git_log(self, git_log_output: str) -> List[FileChange]:
+    def _parse_git_log(self, git_log_output: str) -> list[FileChange]:
         """Parse git log output to extract file changes"""
         changes = []
-        lines = git_log_output.strip().split('\n')
+        lines = git_log_output.strip().split("\n")
 
         current_commit = None
         commit_info = {}
@@ -243,44 +262,46 @@ class DocumentationSyncManager:
                 continue
 
             # Parse commit line
-            if re.match(r'^[a-f0-9]{7,40}\s', line):
-                parts = line.split(' ', 1)
+            if re.match(r"^[a-f0-9]{7,40}\s", line):
+                parts = line.split(" ", 1)
                 commit_hash = parts[0]
-                commit_message = parts[1] if len(parts) > 1 else ''
+                commit_message = parts[1] if len(parts) > 1 else ""
                 current_commit = commit_hash
                 commit_info[commit_hash] = {
-                    'message': commit_message,
-                    'author': 'unknown',  # Would need --format to get author
-                    'date': 'unknown'
+                    "message": commit_message,
+                    "author": "unknown",  # Would need --format to get author
+                    "date": "unknown",
                 }
                 continue
 
             # Parse file status line
-            if current_commit and line and line[0] in 'AMDRT':
+            if current_commit and line and line[0] in "AMDRT":
                 status = line[0]
                 file_path = line[1:].strip()
 
                 change_type_map = {
-                    'A': 'added',
-                    'M': 'modified',
-                    'D': 'deleted',
-                    'R': 'renamed',
-                    'T': 'modified'  # Type change
+                    "A": "added",
+                    "M": "modified",
+                    "D": "deleted",
+                    "R": "renamed",
+                    "T": "modified",  # Type change
                 }
 
                 # Skip if not a documentation file
-                if not any(self._matches_pattern(file_path, pattern) for pattern in self.doc_patterns):
+                if not any(
+                    self._matches_pattern(file_path, pattern) for pattern in self.doc_patterns
+                ):
                     continue
 
                 change = FileChange(
                     file_path=file_path,
-                    change_type=change_type_map.get(status, 'unknown'),
+                    change_type=change_type_map.get(status, "unknown"),
                     old_path=None,  # Would need more parsing for renames
                     lines_added=0,  # Would need --numstat for line counts
                     lines_deleted=0,
-                    last_modified=commit_info[current_commit]['date'],
-                    author=commit_info[current_commit]['author'],
-                    commit_hash=current_commit
+                    last_modified=commit_info[current_commit]["date"],
+                    author=commit_info[current_commit]["author"],
+                    commit_hash=current_commit,
                 )
                 changes.append(change)
 
@@ -289,9 +310,10 @@ class DocumentationSyncManager:
     def _matches_pattern(self, file_path: str, pattern: str) -> bool:
         """Check if file path matches glob pattern"""
         import fnmatch
+
         return fnmatch.fnmatch(file_path, pattern)
 
-    def find_outdated_files(self, max_age_days: int = 90) -> List[str]:
+    def find_outdated_files(self, max_age_days: int = 90) -> list[str]:
         """Find documentation files that haven't been updated recently"""
         outdated_files = []
 
@@ -317,21 +339,31 @@ class DocumentationSyncManager:
             # Get all documentation files
             all_doc_files = set()
             for pattern in self.doc_patterns:
-                find_result = subprocess.run([
-                    'git', 'ls-files', pattern
-                ], cwd=self.project_root, capture_output=True, text=True)
+                find_result = subprocess.run(
+                    ["git", "ls-files", pattern],
+                    check=False,
+                    cwd=self.project_root,
+                    capture_output=True,
+                    text=True,
+                )
 
                 if find_result.returncode == 0:
-                    all_doc_files.update(f for f in find_result.stdout.strip().split('\n') if f.strip())
+                    all_doc_files.update(
+                        f for f in find_result.stdout.strip().split("\n") if f.strip()
+                    )
 
             # Get recently modified files
-            recent_result = subprocess.run([
-                'git', 'log', '--name-only', '--pretty=format:', since_date
-            ], cwd=self.project_root, capture_output=True, text=True)
+            recent_result = subprocess.run(
+                ["git", "log", "--name-only", "--pretty=format:", since_date],
+                check=False,
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
 
             recent_files = set()
             if recent_result.returncode == 0:
-                recent_files = set(f for f in recent_result.stdout.strip().split('\n') if f.strip())
+                recent_files = set(f for f in recent_result.stdout.strip().split("\n") if f.strip())
 
             # Find outdated files
             for file_path in all_doc_files:
@@ -348,7 +380,7 @@ class DocumentationSyncManager:
         file_str = str(file_path)
         return any(self._matches_pattern(file_str, pattern) for pattern in self.ignore_patterns)
 
-    def commit_documentation_changes(self, message: str, files: Optional[List[str]] = None) -> bool:
+    def commit_documentation_changes(self, message: str, files: list[str] | None = None) -> bool:
         """Commit documentation changes"""
         if not self.is_git_repository():
             print("Not a git repository")
@@ -358,16 +390,15 @@ class DocumentationSyncManager:
             # Add files
             if files:
                 for file_path in files:
-                    subprocess.run(['git', 'add', file_path], cwd=self.project_root, check=True)
+                    subprocess.run(["git", "add", file_path], cwd=self.project_root, check=True)
             else:
                 # Add all documentation files
                 for pattern in self.doc_patterns:
-                    subprocess.run(['git', 'add', pattern], cwd=self.project_root)
+                    subprocess.run(["git", "add", pattern], check=False, cwd=self.project_root)
 
             # Check if there are changes to commit
             status_result = subprocess.run(
-                ['git', 'diff', '--cached', '--quiet'],
-                cwd=self.project_root
+                ["git", "diff", "--cached", "--quiet"], check=False, cwd=self.project_root
             )
 
             if status_result.returncode == 0:
@@ -375,9 +406,13 @@ class DocumentationSyncManager:
                 return True
 
             # Commit changes
-            commit_result = subprocess.run([
-                'git', 'commit', '-m', message
-            ], cwd=self.project_root, capture_output=True, text=True)
+            commit_result = subprocess.run(
+                ["git", "commit", "-m", message],
+                check=False,
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+            )
 
             if commit_result.returncode == 0:
                 print(f"Successfully committed: {message}")
@@ -398,11 +433,12 @@ class DocumentationSyncManager:
         try:
             # Fetch latest changes
             fetch_result = subprocess.run(
-                ['git', 'fetch'],
+                ["git", "fetch"],
+                check=False,
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
-                timeout=60
+                timeout=60,
             )
 
             if fetch_result.returncode != 0:
@@ -413,10 +449,11 @@ class DocumentationSyncManager:
             status = self.get_git_status()
             if status.commits_behind > 0:
                 pull_result = subprocess.run(
-                    ['git', 'pull'],
+                    ["git", "pull"],
+                    check=False,
                     cwd=self.project_root,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
 
                 if pull_result.returncode != 0:
@@ -426,10 +463,11 @@ class DocumentationSyncManager:
             # Push if ahead and requested
             if push and status.commits_ahead > 0:
                 push_result = subprocess.run(
-                    ['git', 'push'],
+                    ["git", "push"],
+                    check=False,
                     cwd=self.project_root,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
 
                 if push_result.returncode != 0:
@@ -469,10 +507,10 @@ class DocumentationSyncManager:
             missing_files=missing_files,
             recommendations=recommendations,
             auto_sync_enabled=False,  # Would be configurable
-            last_sync=None  # Would track from config/state
+            last_sync=None,  # Would track from config/state
         )
 
-    def _find_missing_referenced_files(self) -> List[str]:
+    def _find_missing_referenced_files(self) -> list[str]:
         """Find files that are referenced but don't exist"""
         missing_files = []
 
@@ -480,8 +518,9 @@ class DocumentationSyncManager:
         # For now, return empty list
         return missing_files
 
-    def _generate_sync_recommendations(self, status: SyncStatus, changes: List[FileChange],
-                                     outdated: List[str], missing: List[str]) -> List[str]:
+    def _generate_sync_recommendations(
+        self, status: SyncStatus, changes: list[FileChange], outdated: list[str], missing: list[str]
+    ) -> list[str]:
         """Generate synchronization recommendations"""
         recommendations = []
 
@@ -490,7 +529,9 @@ class DocumentationSyncManager:
             return recommendations
 
         if status.has_uncommitted_changes:
-            recommendations.append(f"Commit {len(status.files_to_commit)} uncommitted documentation changes")
+            recommendations.append(
+                f"Commit {len(status.files_to_commit)} uncommitted documentation changes"
+            )
 
         if status.commits_behind > 0:
             recommendations.append(f"Pull {status.commits_behind} commits from remote repository")
@@ -502,13 +543,17 @@ class DocumentationSyncManager:
             recommendations.append(f"Resolve {len(status.sync_conflicts)} merge conflicts")
 
         if outdated:
-            recommendations.append(f"Review and update {len(outdated)} outdated documentation files")
+            recommendations.append(
+                f"Review and update {len(outdated)} outdated documentation files"
+            )
 
         if missing:
             recommendations.append(f"Fix {len(missing)} broken file references")
 
         if len(changes) > 50:
-            recommendations.append("High documentation activity - consider reviewing recent changes")
+            recommendations.append(
+                "High documentation activity - consider reviewing recent changes"
+            )
 
         if not recommendations:
             recommendations.append("Documentation is synchronized and up to date")
@@ -517,14 +562,14 @@ class DocumentationSyncManager:
 
     def save_report(self, report: SyncReport, output_path: str) -> None:
         """Save sync report to JSON file"""
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(asdict(report), f, indent=2, default=str)
 
     def print_summary(self, report: SyncReport) -> None:
         """Print synchronization summary"""
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("🔄 DOCUMENTATION SYNC SUMMARY")
-        print("="*50)
+        print("=" * 50)
 
         status = report.sync_status
 
@@ -539,13 +584,13 @@ class DocumentationSyncManager:
         else:
             print("📂 Not a git repository")
 
-        print(f"\n📊 Recent Activity (30 days):")
+        print("\n📊 Recent Activity (30 days):")
         print(f"  • File changes: {len(report.recent_changes)}")
         print(f"  • Outdated files: {len(report.outdated_files)}")
         print(f"  • Missing references: {len(report.missing_files)}")
 
         if report.recommendations:
-            print(f"\n💡 Recommendations:")
+            print("\n💡 Recommendations:")
             for i, rec in enumerate(report.recommendations, 1):
                 print(f"  {i}. {rec}")
 

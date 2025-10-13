@@ -6,9 +6,12 @@
 
 set -e
 
-# Configuration
+# Parse arguments: ACTION [interface] [level]
+ACTION="${1:-status}"
+shift || true
 WIFI_INTERFACE="${1:-wlan0}"
-STEALTH_LEVEL="${2:-3}"  # 1=basic, 2=moderate, 3=aggressive
+shift || true
+STEALTH_LEVEL="${1:-3}"  # 1=basic, 2=moderate, 3=aggressive
 
 # Colors
 RED='\033[0;31m'
@@ -197,7 +200,7 @@ status_stealth() {
     fi
 }
 
-case "$1" in
+case "$ACTION" in
     enable|start|on)
         if [[ $EUID -ne 0 ]]; then
             echo "Error: Must run as root"

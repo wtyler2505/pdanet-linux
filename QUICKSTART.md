@@ -1,5 +1,24 @@
 # Quick Start Guide
 
+## Zero-Setup (No Dev Tools)
+
+If you just want it to work without fiddling with developer tools:
+
+```bash
+cd /home/wtyler/pdanet-linux
+./scripts/quickstart.sh
+```
+
+What it does:
+- Creates a local Python environment
+- Installs needed Python packages
+- Runs quick self-checks (no network, no sudo)
+- Starts the GUI if GTK is available (prints install tips otherwise)
+
+Logs are stored under `.tmp_config/pdanet-linux/pdanet.log` inside this folder.
+
+---
+
 ## 1. Install
 
 ```bash

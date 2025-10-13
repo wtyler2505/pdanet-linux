@@ -29,15 +29,25 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Get SSID and password from user if not provided
+# Accept SSID/PASSWORD provided as arguments (e.g., SSID=..., PASSWORD=...)
+for arg in "$@"; do
+  case "$arg" in
+    SSID=*) IPHONE_SSID="${arg#SSID=}" ;;
+    PASSWORD=*) IPHONE_PASSWORD="${arg#PASSWORD=}" ;;
+    IPHONE_SSID=*) IPHONE_SSID="${arg#IPHONE_SSID=}" ;;
+    IPHONE_PASSWORD=*) IPHONE_PASSWORD="${arg#IPHONE_PASSWORD=}" ;;
+  esac
+done
+
+# Get SSID and password from user if not provided via args or env
 if [ -z "$IPHONE_SSID" ]; then
     echo -e "${YELLOW}Enter iPhone hotspot SSID (name):${NC}"
-    read -r IPHONE_SSID
+    read -r IPHONE_SSID || true
 fi
 
 if [ -z "$IPHONE_PASSWORD" ]; then
     echo -e "${YELLOW}Enter iPhone hotspot password:${NC}"
-    read -rs IPHONE_PASSWORD
+    read -rs IPHONE_PASSWORD || true
     echo ""
 fi
 

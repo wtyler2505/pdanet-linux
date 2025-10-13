@@ -4,16 +4,16 @@ Pytest configuration and shared fixtures
 Provides common test utilities and setup for all test modules
 """
 
-import pytest
-import sys
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
 from unittest.mock import MagicMock, patch
-import json
+
+import pytest
 
 # Add src to path for all tests
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 @pytest.fixture
@@ -28,10 +28,7 @@ def mock_gi_imports():
     gi_mock.repository.AppIndicator3 = MagicMock()
     gi_mock.repository.Pango = MagicMock()
 
-    with patch.dict(sys.modules, {
-        'gi': gi_mock,
-        'gi.repository': gi_mock.repository
-    }):
+    with patch.dict(sys.modules, {"gi": gi_mock, "gi.repository": gi_mock.repository}):
         yield gi_mock
 
 
@@ -82,37 +79,30 @@ def sample_config_data():
         "theme": "cyberpunk",
         "log_level": "INFO",
         "profiles": [
-            {
-                "name": "Default",
-                "mode": "wifi",
-                "stealth_level": 3,
-                "auto_connect": False
-            }
-        ]
+            {"name": "Default", "mode": "wifi", "stealth_level": 3, "auto_connect": False}
+        ],
     }
 
 
 @pytest.fixture
 def mock_connection_manager(mock_logger, mock_config, mock_stats):
     """Mock connection manager with dependencies"""
-    with patch('connection_manager.get_logger', return_value=mock_logger), \
-         patch('connection_manager.get_config', return_value=mock_config), \
-         patch('connection_manager.get_stats', return_value=mock_stats):
-
+    with (
+        patch("connection_manager.get_logger", return_value=mock_logger),
+        patch("connection_manager.get_config", return_value=mock_config),
+        patch("connection_manager.get_stats", return_value=mock_stats),
+    ):
         from connection_manager import ConnectionManager
+
         return ConnectionManager()
 
 
 @pytest.fixture
 def mock_subprocess():
     """Mock subprocess for testing system commands"""
-    with patch('subprocess.run') as mock_run:
+    with patch("subprocess.run") as mock_run:
         # Default successful response
-        mock_run.return_value = MagicMock(
-            returncode=0,
-            stdout="",
-            stderr=""
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
         yield mock_run
 
 
@@ -120,25 +110,15 @@ def mock_subprocess():
 def network_interfaces():
     """Sample network interface data"""
     return {
-        "usb0": {
-            "type": "usb",
-            "status": "up",
-            "ip": "192.168.49.15",
-            "gateway": "192.168.49.1"
-        },
+        "usb0": {"type": "usb", "status": "up", "ip": "192.168.49.15", "gateway": "192.168.49.1"},
         "wlan0": {
             "type": "wifi",
             "status": "up",
             "ip": "192.168.43.100",
             "gateway": "192.168.43.1",
-            "ssid": "AndroidAP"
+            "ssid": "AndroidAP",
         },
-        "eth0": {
-            "type": "ethernet",
-            "status": "down",
-            "ip": None,
-            "gateway": None
-        }
+        "eth0": {"type": "ethernet", "status": "down", "ip": None, "gateway": None},
     }
 
 
@@ -151,16 +131,14 @@ def iptables_rules():
             "iptables -t nat -A OUTPUT -p tcp -j REDSOCKS",
             "iptables -t nat -A REDSOCKS -d 127.0.0.0/8 -j RETURN",
             "iptables -t nat -A REDSOCKS -d 192.168.0.0/16 -j RETURN",
-            "iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 12345"
+            "iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 12345",
         ],
         "mangle_rules": [
             "iptables -t mangle -N WIFI_STEALTH",
             "iptables -t mangle -A WIFI_STEALTH -j TTL --ttl-set 65",
-            "iptables -t mangle -A OUTPUT -o wlan0 -j WIFI_STEALTH"
+            "iptables -t mangle -A OUTPUT -o wlan0 -j WIFI_STEALTH",
         ],
-        "ipv6_rules": [
-            "ip6tables -A OUTPUT -o wlan0 -j DROP"
-        ]
+        "ipv6_rules": ["ip6tables -A OUTPUT -o wlan0 -j DROP"],
     }
 
 
@@ -192,19 +170,20 @@ redsocks {
 def bandwidth_history():
     """Sample bandwidth history data"""
     import time
+
     current_time = time.time()
 
     return {
         "bytes_sent": [
-            (current_time - 60, 1024 * 100),    # 1 minute ago: 100KB
-            (current_time - 30, 1024 * 500),    # 30 seconds ago: 500KB
-            (current_time, 1024 * 1024)         # Now: 1MB
+            (current_time - 60, 1024 * 100),  # 1 minute ago: 100KB
+            (current_time - 30, 1024 * 500),  # 30 seconds ago: 500KB
+            (current_time, 1024 * 1024),  # Now: 1MB
         ],
         "bytes_received": [
-            (current_time - 60, 1024 * 200),    # 1 minute ago: 200KB
-            (current_time - 30, 1024 * 1000),   # 30 seconds ago: 1000KB
-            (current_time, 1024 * 2048)         # Now: 2MB
-        ]
+            (current_time - 60, 1024 * 200),  # 1 minute ago: 200KB
+            (current_time - 30, 1024 * 1000),  # 30 seconds ago: 1000KB
+            (current_time, 1024 * 2048),  # Now: 2MB
+        ],
     }
 
 
@@ -220,7 +199,7 @@ def theme_colors():
         "BLUE": "#0080FF",
         "CYAN": "#00FFFF",
         "GRAY": "#808080",
-        "DARK_GRAY": "#404040"
+        "DARK_GRAY": "#404040",
     }
 
 
@@ -231,18 +210,18 @@ def carrier_bypass_tests():
         "ttl_test": {
             "command": "ping -c 1 google.com",
             "expected_ttl": 65,
-            "success_pattern": r"ttl=65"
+            "success_pattern": r"ttl=65",
         },
         "ipv6_test": {
             "command": "curl -6 https://ipv6.google.com",
             "expected_result": "failure",
-            "failure_patterns": ["Couldn't connect", "Network unreachable"]
+            "failure_patterns": ["Couldn't connect", "Network unreachable"],
         },
         "dns_test": {
             "command": "nslookup google.com",
             "expected_server": "192.168.43.1",
-            "success_pattern": r"Server:\s+192\.168\.43\.1"
-        }
+            "success_pattern": r"Server:\s+192\.168\.43\.1",
+        },
     }
 
 
@@ -250,26 +229,14 @@ def carrier_bypass_tests():
 def error_scenarios():
     """Common error scenarios for testing"""
     return {
-        "permission_denied": {
-            "returncode": 1,
-            "stderr": "Permission denied"
-        },
-        "command_not_found": {
-            "returncode": 127,
-            "stderr": "command not found"
-        },
-        "network_unreachable": {
-            "returncode": 1,
-            "stderr": "Network is unreachable"
-        },
-        "timeout": {
-            "exception": "TimeoutExpired",
-            "timeout": 30
-        },
+        "permission_denied": {"returncode": 1, "stderr": "Permission denied"},
+        "command_not_found": {"returncode": 127, "stderr": "command not found"},
+        "network_unreachable": {"returncode": 1, "stderr": "Network is unreachable"},
+        "timeout": {"exception": "TimeoutExpired", "timeout": 30},
         "service_not_found": {
             "returncode": 5,
-            "stderr": "Unit redsocks.service could not be found"
-        }
+            "stderr": "Unit redsocks.service could not be found",
+        },
     }
 
 
@@ -277,32 +244,24 @@ def error_scenarios():
 def test_performance_data():
     """Performance benchmarks for testing"""
     return {
-        "max_connection_time": 0.1,      # 100ms
+        "max_connection_time": 0.1,  # 100ms
         "max_state_transition_time": 0.001,  # 1ms
-        "max_gui_update_time": 0.01,     # 10ms
+        "max_gui_update_time": 0.01,  # 10ms
         "max_bandwidth_calc_time": 0.1,  # 100ms
-        "max_iptables_rule_time": 2.0,   # 2 seconds
-        "max_memory_growth_mb": 10,      # 10MB
-        "max_cpu_usage_percent": 50,     # 50%
-        "max_fd_variance": 10            # 10 file descriptors
+        "max_iptables_rule_time": 2.0,  # 2 seconds
+        "max_memory_growth_mb": 10,  # 10MB
+        "max_cpu_usage_percent": 50,  # 50%
+        "max_fd_variance": 10,  # 10 file descriptors
     }
 
 
 # pytest hooks for custom test behavior
 def pytest_configure(config):
     """Configure pytest with custom markers"""
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test"
-    )
-    config.addinivalue_line(
-        "markers", "performance: mark test as performance test"
-    )
-    config.addinivalue_line(
-        "markers", "network: mark test as requiring network access"
-    )
-    config.addinivalue_line(
-        "markers", "sudo: mark test as requiring sudo privileges"
-    )
+    config.addinivalue_line("markers", "integration: mark test as integration test")
+    config.addinivalue_line("markers", "performance: mark test as performance test")
+    config.addinivalue_line("markers", "network: mark test as requiring network access")
+    config.addinivalue_line("markers", "sudo: mark test as requiring sudo privileges")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -329,19 +288,19 @@ def pytest_addoption(parser):
         "--no-network",
         action="store_true",
         default=False,
-        help="Skip tests that require network access"
+        help="Skip tests that require network access",
     )
     parser.addoption(
         "--no-sudo",
         action="store_true",
         default=False,
-        help="Skip tests that require sudo privileges"
+        help="Skip tests that require sudo privileges",
     )
     parser.addoption(
         "--performance",
         action="store_true",
         default=False,
-        help="Run performance tests (may take longer)"
+        help="Run performance tests (may take longer)",
     )
 
 
@@ -353,36 +312,39 @@ class PdaNetTestHelpers:
     def assert_valid_connection_state(state):
         """Assert that state is a valid ConnectionState"""
         from connection_manager import ConnectionState
+
         assert state in ConnectionState, f"Invalid connection state: {state}"
 
     @staticmethod
     def assert_valid_interface_name(interface):
         """Assert that interface name follows expected patterns"""
-        valid_patterns = ['usb0', 'wlan0', 'eth0', 'enp', 'wlp']
-        assert any(interface.startswith(pattern) for pattern in valid_patterns), \
-               f"Invalid interface name: {interface}"
+        valid_patterns = ["usb0", "wlan0", "eth0", "enp", "wlp"]
+        assert any(
+            interface.startswith(pattern) for pattern in valid_patterns
+        ), f"Invalid interface name: {interface}"
 
     @staticmethod
     def assert_cyberpunk_color(color):
         """Assert that color follows cyberpunk theme"""
-        cyberpunk_colors = ['#000000', '#00FF00', '#FF0000', '#FFFF00', '#FFFFFF']
-        assert color.upper() in cyberpunk_colors, \
-               f"Color {color} not in cyberpunk theme"
+        cyberpunk_colors = ["#000000", "#00FF00", "#FF0000", "#FFFF00", "#FFFFFF"]
+        assert color.upper() in cyberpunk_colors, f"Color {color} not in cyberpunk theme"
 
     @staticmethod
     def assert_no_emoji_in_text(text):
         """Assert that text contains no emoji characters"""
         import re
+
         emoji_pattern = re.compile(
             "["
-            "\U0001F600-\U0001F64F"  # emoticons
-            "\U0001F300-\U0001F5FF"  # symbols & pictographs
-            "\U0001F680-\U0001F6FF"  # transport & map symbols
-            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
-            "]+", flags=re.UNICODE)
+            "\U0001f600-\U0001f64f"  # emoticons
+            "\U0001f300-\U0001f5ff"  # symbols & pictographs
+            "\U0001f680-\U0001f6ff"  # transport & map symbols
+            "\U0001f1e0-\U0001f1ff"  # flags (iOS)
+            "]+",
+            flags=re.UNICODE,
+        )
 
-        assert not emoji_pattern.search(text), \
-               f"Text contains emoji (not allowed): {text}"
+        assert not emoji_pattern.search(text), f"Text contains emoji (not allowed): {text}"
 
 
 @pytest.fixture

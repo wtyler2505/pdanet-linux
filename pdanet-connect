@@ -4,7 +4,7 @@
 # Automatically detects Android device and routes all traffic through PdaNet proxy
 #
 
-set -e
+set -Eeuo pipefail
 
 # Colors for output
 RED='\033[0;31m'
@@ -60,8 +60,8 @@ echo -e "${GREEN}✓${NC} Interface IP: $IP_ADDR"
 
 echo -e "${YELLOW}[2/5]${NC} Checking PdaNet proxy availability..."
 
-# Test if PdaNet proxy is accessible
-if ! curl -x http://$PDANET_PROXY_IP:$PDANET_PROXY_PORT --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+# Test if PdaNet proxy is accessible using HTTPS HEAD
+if ! curl -I -x http://$PDANET_PROXY_IP:$PDANET_PROXY_PORT --connect-timeout 5 -sS https://example.com/ > /dev/null 2>&1; then
     echo -e "${RED}Error: Cannot connect to PdaNet proxy at $PDANET_PROXY_IP:$PDANET_PROXY_PORT${NC}"
     echo "Please verify:"
     echo "  1. PdaNet+ app is running on Android"

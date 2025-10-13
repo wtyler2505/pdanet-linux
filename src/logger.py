@@ -5,31 +5,48 @@ Rotating log files with multiple severity levels
 
 import logging
 import os
-from logging.handlers import RotatingFileHandler
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
+
 
 class PdaNetLogger:
     def __init__(self, log_dir=None):
-        if log_dir is None:
-            log_dir = Path.home() / ".config" / "pdanet-linux"
-        else:
-            log_dir = Path(log_dir)
+        # Allow overriding log directory via env for tests/CI
+        # Falls back to XDG-style path in home, then to repo-local .tmp_config if needed
+        env_dir = os.environ.get("PDANET_LOG_DIR")
+        try:
+            if log_dir is not None:
+                resolved_dir = Path(log_dir)
+            elif env_dir:
+                resolved_dir = Path(env_dir)
+            else:
+                resolved_dir = Path.home() / ".config" / "pdanet-linux"
 
-        log_dir.mkdir(parents=True, exist_ok=True)
-        self.log_file = log_dir / "pdanet.log"
+            resolved_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            # Sandbox or permissions blocked; use repo-local tmp directory
+            resolved_dir = Path.cwd() / ".tmp_config" / "pdanet-linux"
+            resolved_dir.mkdir(parents=True, exist_ok=True)
+
+        self.log_file = resolved_dir / "pdanet.log"
 
         # Setup logger
         self.logger = logging.getLogger("pdanet")
         self.logger.setLevel(logging.DEBUG)
 
         # Rotating file handler (max 5MB, keep 5 backups)
-        file_handler = RotatingFileHandler(
-            self.log_file,
-            maxBytes=5 * 1024 * 1024,  # 5 MB
-            backupCount=5
-        )
-        file_handler.setLevel(logging.DEBUG)
+        # Attempt to create rotating file handler; if it fails, fall back to console-only
+        file_handler = None
+        try:
+            file_handler = RotatingFileHandler(
+                self.log_file,
+                maxBytes=5 * 1024 * 1024,  # 5 MB
+                backupCount=5,
+            )
+            file_handler.setLevel(logging.DEBUG)
+        except Exception:
+            file_handler = None
 
         # Console handler for development
         console_handler = logging.StreamHandler()
@@ -37,13 +54,12 @@ class PdaNetLogger:
 
         # Format: [2025-10-03 20:34:12] [INFO] :: Message
         formatter = logging.Formatter(
-            "[%(asctime)s] [%(levelname)s] :: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
+            "[%(asctime)s] [%(levelname)s] :: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
         )
-        file_handler.setFormatter(formatter)
+        if file_handler is not None:
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
         console_handler.setFormatter(formatter)
-
-        self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
         # Log buffer for GUI (last N entries)
@@ -83,11 +99,7 @@ class PdaNetLogger:
     def _add_to_buffer(self, level, message):
         """Add entry to circular buffer for GUI display"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
-        entry = {
-            "timestamp": timestamp,
-            "level": level,
-            "message": message
-        }
+        entry = {"timestamp": timestamp, "level": level, "message": message}
         self.log_buffer.append(entry)
 
         # Keep buffer size limited
@@ -117,14 +129,16 @@ class PdaNetLogger:
     def read_log_file(self, lines=100):
         """Read last N lines from log file"""
         try:
-            with open(self.log_file, 'r') as f:
+            with open(self.log_file) as f:
                 all_lines = f.readlines()
-                return ''.join(all_lines[-lines:])
+                return "".join(all_lines[-lines:])
         except FileNotFoundError:
             return ""
 
+
 # Global logger instance
 _logger_instance = None
+
 
 def get_logger():
     """Get or create global logger instance"""

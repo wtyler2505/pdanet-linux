@@ -4,12 +4,12 @@ Unit tests for Theme
 Tests cyberpunk color system and GTK CSS generation
 """
 
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from theme import Colors, Format, get_css
 
@@ -75,31 +75,31 @@ class TestCSS(unittest.TestCase):
         css = get_css()
 
         # GTK3 doesn't support these properties - they cause runtime errors
-        self.assertNotIn('text-transform', css.lower())
-        self.assertNotIn('letter-spacing', css.lower())
+        self.assertNotIn("text-transform", css.lower())
+        self.assertNotIn("letter-spacing", css.lower())
 
     def test_css_contains_monospace_fonts(self):
         """Test CSS specifies monospace fonts"""
         css = get_css()
-        self.assertIn('monospace', css.lower())
+        self.assertIn("monospace", css.lower())
 
     def test_css_contains_black_background(self):
         """Test CSS uses pure black background"""
         css = get_css()
-        self.assertIn('#000000', css)
+        self.assertIn("#000000", css)
 
     def test_css_contains_cyberpunk_colors(self):
         """Test CSS includes cyberpunk color scheme"""
         css = get_css()
 
         # Should contain green, red, and other accent colors
-        self.assertIn('#00FF00', css)  # Green
-        self.assertIn('#FF0000', css)  # Red
+        self.assertIn("#00FF00", css)  # Green
+        self.assertIn("#FF0000", css)  # Red
 
     def test_no_gradients(self):
         """Test CSS doesn't use gradients (professional style only)"""
         css = get_css()
-        self.assertNotIn('gradient', css.lower())
+        self.assertNotIn("gradient", css.lower())
 
     def test_no_emoji_in_css(self):
         """Test CSS doesn't contain emoji (professional constraint)"""
@@ -115,11 +115,8 @@ class TestCSS(unittest.TestCase):
         for char in css:
             code = ord(char)
             for start, end in emoji_ranges:
-                self.assertFalse(
-                    start <= code <= end,
-                    f"Found emoji character in CSS: {char}"
-                )
+                self.assertFalse(start <= code <= end, f"Found emoji character in CSS: {char}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

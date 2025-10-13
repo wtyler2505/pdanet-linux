@@ -4,11 +4,32 @@ Handles settings, profiles, and persistent state
 SECURITY HARDENED VERSION
 """
 
+import ipaddress
 import json
 import os
-import ipaddress
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+# Support both package and direct module execution in tests
+try:
+    # When src is treated as a package (e.g., `src` on PYTHONPATH)
+    from . import secret_store as secrets  # type: ignore
+except Exception:  # pragma: no cover - fallback for direct module imports
+    # When modules are imported directly from `src/` (tests add `src` to sys.path)
+    import secret_store as secrets  # type: ignore
+
+CONFIG_DIR = str(Path.home() / ".config" / "pdanet-linux")
+
+
+def get_logger():
+    """Compatibility shim used by legacy tests."""
+    try:
+        from logger import get_logger as _logger
+
+        return _logger()
+    except Exception:
+        return None
+
 
 class ConfigManager:
     # SECURITY FIX: Define allowed configuration keys and their types
@@ -30,7 +51,7 @@ class ConfigManager:
         "theme": str,
         "window_width": int,
         "window_height": int,
-        "single_instance": bool
+        "single_instance": bool,
     }
 
     # SECURITY FIX: Define value constraints
@@ -44,12 +65,12 @@ class ConfigManager:
         "window_width": (400, 3840),
         "window_height": (300, 2160),
         "log_level": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        "theme": ["dark", "light"]
+        "theme": ["dark", "light"],
     }
 
     def __init__(self, config_dir=None):
         if config_dir is None:
-            config_dir = Path.home() / ".config" / "pdanet-linux"
+            config_dir = Path(CONFIG_DIR)
         else:
             config_dir = Path(config_dir)
 
@@ -59,16 +80,17 @@ class ConfigManager:
         self.config_file = self.config_dir / "config.json"
         self.profiles_file = self.config_dir / "profiles.json"
         self.state_file = self.config_dir / "state.json"
+        self.wifi_networks_file = self.config_dir / "wifi_networks.json"
 
         # Default configuration
         self.defaults = {
             "auto_start": False,
             "start_minimized": False,
-            "auto_reconnect": False,
+            "auto_reconnect": True,
             "reconnect_attempts": 3,
             "reconnect_delay": 5,
             "stealth_mode": False,
-            "stealth_level": 2,
+            "stealth_level": 3,
             "proxy_ip": "192.168.49.1",
             "proxy_port": 8000,
             "connection_timeout": 30,
@@ -79,7 +101,8 @@ class ConfigManager:
             "theme": "dark",
             "window_width": 900,
             "window_height": 600,
-            "single_instance": True
+            "single_instance": True,
+            "connection_mode": "wifi",
         }
 
         # Load or create config
@@ -107,17 +130,19 @@ class ConfigManager:
         # Check type
         expected_type = self.ALLOWED_CONFIG_KEYS[key]
         if not isinstance(value, expected_type):
-            raise TypeError(f"Invalid type for {key}: expected {expected_type.__name__}, got {type(value).__name__}")
+            raise TypeError(
+                f"Invalid type for {key}: expected {expected_type.__name__}, got {type(value).__name__}"
+            )
 
         # Check constraints
         if key in self.VALUE_CONSTRAINTS:
             constraint = self.VALUE_CONSTRAINTS[key]
-            
+
             if isinstance(constraint, tuple):  # Range constraint
                 min_val, max_val = constraint
                 if not (min_val <= value <= max_val):
                     raise ValueError(f"{key} must be between {min_val} and {max_val}")
-            
+
             elif isinstance(constraint, list):  # Enum constraint
                 if value not in constraint:
                     raise ValueError(f"{key} must be one of {constraint}")
@@ -132,7 +157,7 @@ class ConfigManager:
         """Load configuration from file or create defaults"""
         if self.config_file.exists():
             try:
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file) as f:
                     config = json.load(f)
                     # Merge with defaults (add any new keys)
                     validated_config = {}
@@ -157,12 +182,16 @@ class ConfigManager:
     def save_config(self):
         """Save configuration to file"""
         try:
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 json.dump(self.config, f, indent=2)
             return True
         except Exception as e:
             print(f"Error saving config: {e}")
             return False
+
+    # Compatibility alias for older integrations/tests
+    def save(self):
+        return self.save_config()
 
     def get(self, key, default=None):
         """Get configuration value"""
@@ -187,7 +216,7 @@ class ConfigManager:
         """Load connection profiles"""
         if self.profiles_file.exists():
             try:
-                with open(self.profiles_file, 'r') as f:
+                with open(self.profiles_file) as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Error loading profiles: {e}")
@@ -197,24 +226,32 @@ class ConfigManager:
     def save_profiles(self):
         """Save profiles to file"""
         try:
-            with open(self.profiles_file, 'w') as f:
+            with open(self.profiles_file, "w") as f:
                 json.dump(self.profiles, f, indent=2)
             return True
         except Exception as e:
             print(f"Error saving profiles: {e}")
             return False
 
-    def add_profile(self, name, settings):
-        """Add or update a connection profile"""
+    def add_profile(self, name, settings=None):
+        """Add or update a connection profile (compatibility wrapper)."""
+        if isinstance(name, dict):
+            profile = name.copy()
+            profile_name = profile.pop("name", None)
+            if not profile_name:
+                raise ValueError("Profile dictionary must include a 'name' key")
+            settings = profile
+        else:
+            profile_name = name
+            if settings is None:
+                raise ValueError("Profile settings are required")
+
         # Validate profile settings
         for key, value in settings.items():
             if key in self.ALLOWED_CONFIG_KEYS:
                 self._validate_config_value(key, value)
-        
-        self.profiles[name] = {
-            "created": datetime.now().isoformat(),
-            "settings": settings
-        }
+
+        self.profiles[profile_name] = {"created": datetime.now().isoformat(), "settings": settings}
         self.save_profiles()
 
     def delete_profile(self, name):
@@ -235,12 +272,21 @@ class ConfigManager:
         """List all profile names"""
         return list(self.profiles.keys())
 
+    # Compatibility helper for older tests
+    def get_profiles(self):
+        profiles = []
+        for name, payload in self.profiles.items():
+            data = {"name": name}
+            data.update(payload.get("settings", {}))
+            profiles.append(data)
+        return profiles
+
     # State Management (for remembering last connection, etc.)
     def load_state(self):
         """Load application state"""
         if self.state_file.exists():
             try:
-                with open(self.state_file, 'r') as f:
+                with open(self.state_file) as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Error loading state: {e}")
@@ -250,7 +296,7 @@ class ConfigManager:
     def save_state(self):
         """Save application state"""
         try:
-            with open(self.state_file, 'w') as f:
+            with open(self.state_file, "w") as f:
                 json.dump(self.state, f, indent=2)
             return True
         except Exception as e:
@@ -275,7 +321,7 @@ class ConfigManager:
 
     def enable_autostart(self):
         """Enable auto-start on boot"""
-        desktop_content = f"""[Desktop Entry]
+        desktop_content = """[Desktop Entry]
 Version=1.0
 Type=Application
 Name=PdaNet Linux
@@ -288,7 +334,7 @@ X-GNOME-Autostart-enabled=true
 """
         try:
             autostart_file = self.get_autostart_file()
-            with open(autostart_file, 'w') as f:
+            with open(autostart_file, "w") as f:
                 f.write(desktop_content)
             os.chmod(autostart_file, 0o755)
             self.set("auto_start", True)
@@ -313,8 +359,83 @@ X-GNOME-Autostart-enabled=true
         """Check if autostart is enabled"""
         return self.get_autostart_file().exists()
 
+    def load_wifi_networks(self):
+        """Load saved WiFi networks"""
+        try:
+            if self.wifi_networks_file.exists():
+                with open(self.wifi_networks_file) as f:
+                    return json.load(f)
+            return {}
+        except Exception:
+            return {}
+
+    def save_wifi_networks(self, networks):
+        """Save WiFi networks with passwords"""
+        try:
+            with open(self.wifi_networks_file, "w") as f:
+                json.dump(networks, f, indent=2)
+            # Set restrictive permissions (600 - owner read/write only)
+            os.chmod(self.wifi_networks_file, 0o600)
+        except Exception as e:
+            print(f"Failed to save WiFi networks: {e}")
+
+    def save_wifi_network(self, ssid, password):
+        """Save a single WiFi network"""
+        # Prefer secure storage when available
+        stored_securely = False
+        try:
+            if secrets.is_available():
+                stored_securely = secrets.set_wifi_password(ssid, password)
+        except Exception:
+            stored_securely = False
+
+        networks = self.load_wifi_networks()
+        entry = {"last_used": datetime.now().isoformat()}
+        # Only persist plaintext if secure storage unavailable
+        if not stored_securely:
+            entry["password"] = password
+        networks[ssid] = entry
+        self.save_wifi_networks(networks)
+
+    def get_wifi_password(self, ssid) -> str | None:
+        """Get saved password for SSID (keyring preferred)."""
+        try:
+            if secrets.is_available():
+                secret = secrets.get_wifi_password(ssid)
+                if secret:
+                    return secret
+        except Exception:
+            pass
+        networks = self.load_wifi_networks()
+        if ssid in networks:
+            return networks[ssid].get("password")
+        return None
+
+    def delete_wifi_network(self, ssid):
+        """Delete a saved WiFi network"""
+        try:
+            if secrets.is_available():
+                secrets.delete_wifi_password(ssid)
+        except Exception:
+            pass
+        networks = self.load_wifi_networks()
+        if ssid in networks:
+            del networks[ssid]
+            self.save_wifi_networks(networks)
+
+    def list_saved_wifi_networks(self):
+        """Get list of saved WiFi SSIDs"""
+        networks = self.load_wifi_networks()
+        # Sort by last used, most recent first
+        sorted_networks = sorted(
+            networks.items(), key=lambda x: x[1].get("last_used", ""), reverse=True
+        )
+        return [ssid for ssid, _ in sorted_networks]
+
+
 # Global config instance
 _config_instance = None
+
 
 def get_config():
     """Get or create global config instance"""

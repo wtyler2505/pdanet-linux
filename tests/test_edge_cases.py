@@ -4,23 +4,21 @@ Edge Case and Error Scenario Tests
 Tests boundary conditions, error handling, and failure scenarios
 """
 
-import unittest
-from unittest.mock import Mock, patch, MagicMock
-import sys
-import os
-import tempfile
-import time
-import threading
 import json
+import os
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import unittest
+from unittest.mock import MagicMock, Mock, patch
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 # Mock dependencies for testing
-with patch.dict(sys.modules, {
-    'gi': MagicMock(),
-    'gi.repository': MagicMock()
-}):
+with patch.dict(sys.modules, {"gi": MagicMock(), "gi.repository": MagicMock()}):
     pass
 
 
@@ -35,10 +33,11 @@ class TestConnectionEdgeCases(unittest.TestCase):
 
     def test_rapid_state_transitions(self):
         """Test rapid state change handling"""
-        with patch('connection_manager.get_logger', return_value=self.mock_logger), \
-             patch('connection_manager.get_config', return_value=self.mock_config), \
-             patch('connection_manager.get_stats', return_value=self.mock_stats):
-
+        with (
+            patch("connection_manager.get_logger", return_value=self.mock_logger),
+            patch("connection_manager.get_config", return_value=self.mock_config),
+            patch("connection_manager.get_stats", return_value=self.mock_stats),
+        ):
             from connection_manager import ConnectionManager, ConnectionState
 
             manager = ConnectionManager()
@@ -49,7 +48,7 @@ class TestConnectionEdgeCases(unittest.TestCase):
                 ConnectionState.CONNECTED,
                 ConnectionState.DISCONNECTING,
                 ConnectionState.DISCONNECTED,
-                ConnectionState.ERROR
+                ConnectionState.ERROR,
             ]
 
             for state in states:
@@ -58,10 +57,11 @@ class TestConnectionEdgeCases(unittest.TestCase):
 
     def test_concurrent_connection_attempts(self):
         """Test handling of concurrent connection attempts"""
-        with patch('connection_manager.get_logger', return_value=self.mock_logger), \
-             patch('connection_manager.get_config', return_value=self.mock_config), \
-             patch('connection_manager.get_stats', return_value=self.mock_stats):
-
+        with (
+            patch("connection_manager.get_logger", return_value=self.mock_logger),
+            patch("connection_manager.get_config", return_value=self.mock_config),
+            patch("connection_manager.get_stats", return_value=self.mock_stats),
+        ):
             from connection_manager import ConnectionManager, ConnectionState
 
             manager = ConnectionManager()
@@ -86,15 +86,16 @@ class TestConnectionEdgeCases(unittest.TestCase):
             # Should handle concurrent attempts gracefully
             self.assertTrue(len(results) > 0)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_network_interface_not_found(self, mock_run):
         """Test handling when network interface is not found"""
         mock_run.return_value = Mock(returncode=1, stdout="", stderr="Device not found")
 
-        with patch('connection_manager.get_logger', return_value=self.mock_logger), \
-             patch('connection_manager.get_config', return_value=self.mock_config), \
-             patch('connection_manager.get_stats', return_value=self.mock_stats):
-
+        with (
+            patch("connection_manager.get_logger", return_value=self.mock_logger),
+            patch("connection_manager.get_config", return_value=self.mock_config),
+            patch("connection_manager.get_stats", return_value=self.mock_stats),
+        ):
             from connection_manager import ConnectionManager
 
             manager = ConnectionManager()
@@ -103,23 +104,28 @@ class TestConnectionEdgeCases(unittest.TestCase):
             # Should return None when interface not found
             self.assertIsNone(interface)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_proxy_connection_timeout(self, mock_run):
         """Test proxy connection timeout handling"""
         import subprocess
-        mock_run.side_effect = subprocess.TimeoutExpired(['curl'], 10)
+
+        mock_run.side_effect = subprocess.TimeoutExpired(["curl"], 10)
 
         # Test timeout handling
         with self.assertRaises(subprocess.TimeoutExpired):
-            subprocess.run(['curl', '-x', 'http://192.168.49.1:8000', 'http://google.com'],
-                         timeout=10)
+            subprocess.run(
+                ["curl", "-x", "http://192.168.49.1:8000", "http://google.com"],
+                check=False,
+                timeout=10,
+            )
 
     def test_invalid_state_transitions(self):
         """Test prevention of invalid state transitions"""
-        with patch('connection_manager.get_logger', return_value=self.mock_logger), \
-             patch('connection_manager.get_config', return_value=self.mock_config), \
-             patch('connection_manager.get_stats', return_value=self.mock_stats):
-
+        with (
+            patch("connection_manager.get_logger", return_value=self.mock_logger),
+            patch("connection_manager.get_config", return_value=self.mock_config),
+            patch("connection_manager.get_stats", return_value=self.mock_stats),
+        ):
             from connection_manager import ConnectionManager, ConnectionState
 
             manager = ConnectionManager()
@@ -141,10 +147,11 @@ class TestConnectionEdgeCases(unittest.TestCase):
 
     def test_memory_leak_prevention(self):
         """Test prevention of memory leaks in callbacks"""
-        with patch('connection_manager.get_logger', return_value=self.mock_logger), \
-             patch('connection_manager.get_config', return_value=self.mock_config), \
-             patch('connection_manager.get_stats', return_value=self.mock_stats):
-
+        with (
+            patch("connection_manager.get_logger", return_value=self.mock_logger),
+            patch("connection_manager.get_config", return_value=self.mock_config),
+            patch("connection_manager.get_stats", return_value=self.mock_stats),
+        ):
             from connection_manager import ConnectionManager, ConnectionState
 
             manager = ConnectionManager()
@@ -179,6 +186,7 @@ class TestGUIEdgeCases(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures"""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def test_invalid_gtk_css(self):
@@ -200,7 +208,7 @@ class TestGUIEdgeCases(unittest.TestCase):
         """Test handling when config directory doesn't exist"""
         nonexistent_path = "/tmp/nonexistent/config/path"
 
-        with patch('config_manager.CONFIG_DIR', nonexistent_path):
+        with patch("config_manager.CONFIG_DIR", nonexistent_path):
             # Should create directory when needed
             try:
                 os.makedirs(nonexistent_path, exist_ok=True)
@@ -215,19 +223,18 @@ class TestGUIEdgeCases(unittest.TestCase):
         config_file = os.path.join(self.temp_dir, "config.json")
 
         # Create corrupted JSON file
-        with open(config_file, 'w') as f:
+        with open(config_file, "w") as f:
             f.write('{"invalid": json syntax}')
 
         # Should handle JSON parsing error gracefully
-        with self.assertRaises(json.JSONDecodeError):
-            with open(config_file, 'r') as f:
-                json.load(f)
+        with self.assertRaises(json.JSONDecodeError), open(config_file) as f:
+            json.load(f)
 
     def test_extremely_long_log_messages(self):
         """Test handling of extremely long log messages"""
         long_message = "A" * 10000  # 10KB message
 
-        with patch('logger.get_logger') as mock_get_logger:
+        with patch("logger.get_logger") as mock_get_logger:
             mock_logger = MagicMock()
             mock_get_logger.return_value = mock_logger
 
@@ -238,10 +245,10 @@ class TestGUIEdgeCases(unittest.TestCase):
     def test_gui_update_with_missing_data(self):
         """Test GUI updates with missing or None data"""
         mock_stats = {
-            'bytes_sent': None,
-            'bytes_received': None,
-            'ping_latency': None,
-            'interface': None
+            "bytes_sent": None,
+            "bytes_received": None,
+            "ping_latency": None,
+            "interface": None,
         }
 
         # GUI should handle None values gracefully
@@ -253,64 +260,59 @@ class TestGUIEdgeCases(unittest.TestCase):
 
     def test_system_tray_unavailable(self):
         """Test handling when system tray is unavailable"""
-        with patch('gi.repository.AppIndicator3') as mock_indicator:
-            mock_indicator.Indicator.side_effect = Exception("No system tray available")
+        with patch("gi.repository.AppIndicator3") as mock_indicator:
+            mock_indicator.Indicator.new.side_effect = Exception("No system tray available")
 
             # Should handle system tray unavailability gracefully
-            try:
-                indicator = mock_indicator.Indicator.new("test", "icon", 1)
-                self.fail("Should have raised exception")
-            except Exception as e:
-                self.assertIn("No system tray", str(e))
+            with self.assertRaises(Exception) as ctx:
+                mock_indicator.Indicator.new("test", "icon", 1)
+            self.assertIn("No system tray", str(ctx.exception))
 
 
 class TestNetworkEdgeCases(unittest.TestCase):
     """Test suite for network-related edge cases"""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_iptables_permission_denied(self, mock_run):
         """Test handling of iptables permission errors"""
-        mock_run.return_value = Mock(
-            returncode=1,
-            stdout="",
-            stderr="iptables: Permission denied"
-        )
+        mock_run.return_value = Mock(returncode=1, stdout="", stderr="iptables: Permission denied")
 
-        result = subprocess.run(['iptables', '-L'], capture_output=True, text=True)
+        result = subprocess.run(["iptables", "-L"], check=False, capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Permission denied", result.stderr)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_redsocks_service_not_found(self, mock_run):
         """Test handling when redsocks service is not installed"""
         mock_run.return_value = Mock(
-            returncode=5,
-            stdout="",
-            stderr="Unit redsocks.service could not be found"
+            returncode=5, stdout="", stderr="Unit redsocks.service could not be found"
         )
 
-        result = subprocess.run(['systemctl', 'status', 'redsocks'],
-                              capture_output=True, text=True)
+        result = subprocess.run(
+            ["systemctl", "status", "redsocks"], check=False, capture_output=True, text=True
+        )
         self.assertNotEqual(result.returncode, 0)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_network_interface_disappears(self, mock_run):
         """Test handling when network interface disappears during operation"""
         # First call returns interface
         # Second call returns no interface
         mock_run.side_effect = [
             Mock(returncode=0, stdout="wlan0\n"),
-            Mock(returncode=1, stdout="", stderr="No such device")
+            Mock(returncode=1, stdout="", stderr="No such device"),
         ]
 
         # First detection succeeds
-        result1 = subprocess.run(['ip', 'link', 'show', 'wlan0'],
-                               capture_output=True, text=True)
+        result1 = subprocess.run(
+            ["ip", "link", "show", "wlan0"], check=False, capture_output=True, text=True
+        )
         self.assertEqual(result1.returncode, 0)
 
         # Second detection fails (interface disappeared)
-        result2 = subprocess.run(['ip', 'link', 'show', 'wlan0'],
-                               capture_output=True, text=True)
+        result2 = subprocess.run(
+            ["ip", "link", "show", "wlan0"], check=False, capture_output=True, text=True
+        )
         self.assertNotEqual(result2.returncode, 0)
 
     def test_proxy_response_malformed(self):
@@ -328,17 +330,16 @@ class TestNetworkEdgeCases(unittest.TestCase):
                 # Consider it an error response
                 self.assertNotIn("200 OK", response)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_dns_resolution_failure(self, mock_run):
         """Test handling of DNS resolution failures"""
         mock_run.return_value = Mock(
-            returncode=1,
-            stdout="",
-            stderr="nslookup: can't resolve 'nonexistent.domain.invalid'"
+            returncode=1, stdout="", stderr="nslookup: can't resolve 'nonexistent.domain.invalid'"
         )
 
-        result = subprocess.run(['nslookup', 'nonexistent.domain.invalid'],
-                              capture_output=True, text=True)
+        result = subprocess.run(
+            ["nslookup", "nonexistent.domain.invalid"], check=False, capture_output=True, text=True
+        )
         self.assertNotEqual(result.returncode, 0)
 
 
@@ -347,10 +348,11 @@ class TestResourceLimitEdgeCases(unittest.TestCase):
 
     def test_high_frequency_state_changes(self):
         """Test handling of very high frequency state changes"""
-        with patch('connection_manager.get_logger'), \
-             patch('connection_manager.get_config'), \
-             patch('connection_manager.get_stats'):
-
+        with (
+            patch("connection_manager.get_logger"),
+            patch("connection_manager.get_config"),
+            patch("connection_manager.get_stats"),
+        ):
             from connection_manager import ConnectionManager, ConnectionState
 
             manager = ConnectionManager()
@@ -369,7 +371,7 @@ class TestResourceLimitEdgeCases(unittest.TestCase):
         """Test handling of very large bandwidth numbers"""
         large_bytes = 999_999_999_999_999  # ~1PB
 
-        with patch('stats_collector.get_logger'):
+        with patch("stats_collector.get_logger"):
             from stats_collector import StatsCollector
 
             collector = StatsCollector()
@@ -398,9 +400,9 @@ class TestResourceLimitEdgeCases(unittest.TestCase):
     def test_disk_space_exhaustion(self):
         """Test handling of disk space exhaustion"""
         # Simulate disk full error
-        with patch('builtins.open', side_effect=OSError("No space left on device")):
+        with patch("builtins.open", side_effect=OSError("No space left on device")):
             try:
-                with open('/tmp/test_file', 'w') as f:
+                with open("/tmp/test_file", "w") as f:
                     f.write("test data")
                 self.fail("Should have raised OSError")
             except OSError as e:
@@ -416,7 +418,7 @@ class TestResourceLimitEdgeCases(unittest.TestCase):
         chunks = []
 
         for i in range(0, len(large_data), chunk_size):
-            chunk = large_data[i:i + chunk_size]
+            chunk = large_data[i : i + chunk_size]
             chunks.append(chunk)
 
         # Verify chunking worked correctly
@@ -428,10 +430,11 @@ class TestErrorRecoveryScenarios(unittest.TestCase):
 
     def test_automatic_reconnection_after_failure(self):
         """Test automatic reconnection after connection failure"""
-        with patch('connection_manager.get_logger'), \
-             patch('connection_manager.get_config'), \
-             patch('connection_manager.get_stats'):
-
+        with (
+            patch("connection_manager.get_logger"),
+            patch("connection_manager.get_config"),
+            patch("connection_manager.get_stats"),
+        ):
             from connection_manager import ConnectionManager, ConnectionState
 
             manager = ConnectionManager()
@@ -465,7 +468,7 @@ class TestErrorRecoveryScenarios(unittest.TestCase):
             "auto_reconnect": False,
             "window_width": 900,
             "window_height": 600,
-            "theme": "cyberpunk"
+            "theme": "cyberpunk",
         }
 
         corrupted_config = None  # Simulate corrupted/missing config
@@ -476,18 +479,15 @@ class TestErrorRecoveryScenarios(unittest.TestCase):
 
     def test_service_restart_handling(self):
         """Test handling of service restarts (redsocks, NetworkManager)"""
-        service_states = {
-            'redsocks': 'stopped',
-            'NetworkManager': 'running'
-        }
+        service_states = {"redsocks": "stopped", "NetworkManager": "running"}
 
         # Should detect service states and handle appropriately
         for service, state in service_states.items():
-            if state == 'stopped':
+            if state == "stopped":
                 # Should attempt to restart or handle gracefully
-                service_action = 'restart_needed'
-                self.assertEqual(service_action, 'restart_needed')
+                service_action = "restart_needed"
+                self.assertEqual(service_action, "restart_needed")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

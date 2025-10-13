@@ -2,14 +2,15 @@
 """
 Headless GUI Test - Verify GUI can be instantiated without crashing
 """
-import sys
+
 import os
+import sys
 
 # Set up environment for headless operation
-os.environ['DISPLAY'] = ':99'
+os.environ["DISPLAY"] = ":99"
 
 # Add src to path
-sys.path.insert(0, '/app/src')
+sys.path.insert(0, "/app/src")
 
 print("=" * 60)
 print("PDANET LINUX - HEADLESS GUI TEST")
@@ -20,8 +21,8 @@ print()
 print("[1/6] Testing GTK import...")
 try:
     import gi
-    gi.require_version('Gtk', '3.0')
-    from gi.repository import Gtk, Gdk, GLib
+
+    gi.require_version("Gtk", "3.0")
     print("✓ GTK imports successful")
 except Exception as e:
     print(f"✗ GTK import failed: {e}")
@@ -30,11 +31,12 @@ except Exception as e:
 # Test 2: Import core modules
 print("\n[2/6] Testing core module imports...")
 try:
-    from logger import get_logger
     from config_manager import get_config
-    from stats_collector import get_stats
     from connection_manager import get_connection_manager
-    from theme import Colors, Format, get_css
+    from logger import get_logger
+    from stats_collector import get_stats
+    from theme import get_css
+
     print("✓ Core modules imported")
 except Exception as e:
     print(f"✗ Core module import failed: {e}")
@@ -43,7 +45,8 @@ except Exception as e:
 # Test 3: Import GUI module
 print("\n[3/6] Testing GUI module import...")
 try:
-    from pdanet_gui_v2 import PdaNetGUI, SingleInstance
+    from pdanet_gui_v2 import PdaNetGUI
+
     print("✓ GUI module imported")
 except Exception as e:
     print(f"✗ GUI module import failed: {e}")
@@ -82,7 +85,13 @@ try:
     print("✓ GUI instantiation successful (unexpected - no display!)")
 except Exception as e:
     error_str = str(e).lower()
-    if 'gtk' in error_str or 'display' in error_str or 'cannot open' in error_str or 'connection' in error_str or 'init' in error_str:
+    if (
+        "gtk" in error_str
+        or "display" in error_str
+        or "cannot open" in error_str
+        or "connection" in error_str
+        or "init" in error_str
+    ):
         print("✓ GUI instantiation correct (GTK init error expected without display)")
     else:
         print(f"✗ GUI instantiation failed: {e}")

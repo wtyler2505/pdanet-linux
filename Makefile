@@ -149,12 +149,8 @@ status: ## Show documentation status and metrics
 	fi
 
 # Development targets
-dev-setup: install-deps ## Setup development environment
-	@echo "$(GREEN)Setting up development environment...$(NC)"
-	@mkdir -p $(DOCS_DIR)/{architecture/{adrs,generated},build}
-	@mkdir -p $(SCRIPTS_DIR)
-	@mkdir -p tools
-	@echo "$(GREEN)Development environment ready$(NC)"
+dev-setup: ## Setup full developer environment (Python deps + system tools)
+	@bash scripts/dev-setup.sh
 
 dev-docs: ## Development mode: build and serve with file watching
 	@echo "$(GREEN)Starting development documentation server...$(NC)"

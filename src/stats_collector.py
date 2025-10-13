@@ -3,14 +3,25 @@ PdaNet Linux - Statistics Collector
 Tracks bandwidth, connection quality, and usage metrics
 """
 
-import time
 import subprocess
+import time
 from collections import deque
-from datetime import datetime
 from pathlib import Path
+
+
+def get_logger():
+    """Compatibility shim for legacy tests."""
+    try:
+        from logger import get_logger as _logger
+
+        return _logger()
+    except Exception:
+        return None
+
 
 class StatsCollector:
     def __init__(self):
+        self._logger = get_logger()
         self.start_time = None
         self.bytes_sent = 0
         self.bytes_received = 0
@@ -18,6 +29,11 @@ class StatsCollector:
         # Rolling windows for rate calculation
         self.rx_history = deque(maxlen=60)  # 60 seconds
         self.tx_history = deque(maxlen=60)
+
+        # Legacy compatibility histories (list based)
+        self.bytes_sent_history = []
+        self.bytes_received_history = []
+        self.max_history = 10
 
         # Connection quality metrics
         self.latency_history = deque(maxlen=30)
@@ -71,8 +87,15 @@ class StatsCollector:
                 self.tx_history.append((current_time, tx_rate))
 
                 # Update totals
-                self.bytes_received += (rx_bytes - self.last_rx_bytes)
-                self.bytes_sent += (tx_bytes - self.last_tx_bytes)
+                delta_rx = rx_bytes - self.last_rx_bytes
+                delta_tx = tx_bytes - self.last_tx_bytes
+                self.bytes_received += delta_rx
+                self.bytes_sent += delta_tx
+
+                self.bytes_received_history.append((current_time, self.bytes_received))
+                self.bytes_sent_history.append((current_time, self.bytes_sent))
+                self._trim_history(self.bytes_received_history)
+                self._trim_history(self.bytes_sent_history)
 
             self.last_rx_bytes = rx_bytes
             self.last_tx_bytes = tx_bytes
@@ -80,7 +103,10 @@ class StatsCollector:
             self.current_interface = interface
 
         except Exception as e:
-            print(f"Error updating bandwidth: {e}")
+            if self._logger:
+                self._logger.error(f"Error updating bandwidth: {e}")
+            else:
+                pass
 
     def get_current_download_rate(self):
         """Get current download rate in bytes/second"""
@@ -133,22 +159,33 @@ class StatsCollector:
         try:
             result = subprocess.run(
                 ["ping", "-c", str(count), "-W", "2", host],
+                check=False,
                 capture_output=True,
                 text=True,
-                timeout=3
+                timeout=3,
             )
 
             if result.returncode == 0:
                 # Parse latency from ping output
-                for line in result.stdout.split('\n'):
-                    if 'time=' in line:
-                        latency_str = line.split('time=')[1].split()[0]
+                for line in result.stdout.split("\n"):
+                    if "time=" in line:
+                        latency_str = line.split("time=")[1].split()[0]
                         latency = float(latency_str)
                         self.latency_history.append(latency)
                         return latency
+                    if "rtt min/avg/max" in line and "=" in line:
+                        stats_part = line.split("=")[1].strip()
+                        try:
+                            _, avg, *_ = stats_part.split("/")
+                            latency = float(avg)
+                            self.latency_history.append(latency)
+                            return latency
+                        except (ValueError, IndexError):
+                            continue
             return None
         except Exception as e:
-            print(f"Ping test error: {e}")
+            if self._logger:
+                self._logger.error(f"Ping test error: {e}")
             return None
 
     def get_current_latency(self):
@@ -168,20 +205,22 @@ class StatsCollector:
         try:
             result = subprocess.run(
                 ["ping", "-c", str(packets_sent), "-W", "1", "8.8.8.8"],
+                check=False,
                 capture_output=True,
                 text=True,
-                timeout=packets_sent + 2
+                timeout=packets_sent + 2,
             )
 
-            for line in result.stdout.split('\n'):
-                if 'packet loss' in line:
-                    loss_str = line.split(',')[2].strip().split('%')[0]
+            for line in result.stdout.split("\n"):
+                if "packet loss" in line:
+                    loss_str = line.split(",")[2].strip().split("%")[0]
                     loss_percent = float(loss_str)
                     self.packet_loss_history.append(loss_percent)
                     return loss_percent
             return 0.0
         except Exception as e:
-            print(f"Packet loss test error: {e}")
+            if self._logger:
+                self._logger.error(f"Packet loss test error: {e}")
             return None
 
     def get_current_packet_loss(self):
@@ -231,11 +270,86 @@ class StatsCollector:
             "latency": self.get_current_latency(),
             "packet_loss": self.get_current_packet_loss(),
             "quality": self.get_connection_quality(),
-            "interface": self.current_interface
+            "interface": self.current_interface,
         }
+
+    # ------------------------------------------------------------------
+    # Compatibility helpers for legacy tests
+    # ------------------------------------------------------------------
+    def _read_interface_bytes(self, interface, stat):
+        path = Path(f"/sys/class/net/{interface}/statistics/{stat}")
+        try:
+            with open(path) as handle:
+                return int(handle.read().strip())
+        except (FileNotFoundError, ValueError, OSError):
+            return 0
+
+    def _calculate_rate(self, history):
+        if not history or len(history) < 2:
+            return 0
+        start_ts, start_val = history[0]
+        end_ts, end_val = history[-1]
+        duration = end_ts - start_ts
+        if duration <= 0:
+            return 0
+        return (end_val - start_val) / duration
+
+    def _trim_history(self, history):
+        if len(history) > self.max_history:
+            del history[: -self.max_history]
+
+    def get_stats(self):
+        return {
+            "bytes_sent": self.bytes_sent,
+            "bytes_received": self.bytes_received,
+            "upload_rate": self.get_current_upload_rate(),
+            "download_rate": self.get_current_download_rate(),
+        }
+
+    @staticmethod
+    def format_bytes(value):
+        return StatsCollector._format_bytes(value)
+
+    @staticmethod
+    def format_rate(value):
+        formatted = StatsCollector._format_bytes(value)
+        if formatted.endswith("B"):
+            return f"{formatted}/s"
+        return f"{formatted} /s"
+
+    @staticmethod
+    def _format_bytes(value):
+        try:
+            bytes_val = float(value)
+        except (TypeError, ValueError):
+            return "0 B"
+
+        units = ["B", "KB", "MB", "GB", "TB", "PB"]
+        power = 0
+        amount = bytes_val
+
+        # Step through binary units
+        while amount >= 1024 and power < len(units) - 1:
+            amount /= 1024.0
+            power += 1
+
+        # If we're very close to the next unit (>= 900 of current), promote for readability
+        if amount >= 900 and power < len(units) - 1:
+            amount /= 1024.0
+            power += 1
+
+        unit = units[power]
+        if unit == "B":
+            return f"{int(bytes_val)} B"
+        return f"{amount:.2f} {unit}"
+
+    def test_ping(self, host="8.8.8.8", count=1):
+        return self.ping_test(host, count)
+
 
 # Global stats instance
 _stats_instance = None
+
 
 def get_stats():
     """Get or create global stats instance"""

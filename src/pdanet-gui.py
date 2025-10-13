@@ -4,13 +4,15 @@ PdaNet Linux GUI - Badass GTK interface for PdaNet tethering
 """
 
 import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('AppIndicator3', '0.1')
-from gi.repository import Gtk, Gdk, GLib, AppIndicator3
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("AppIndicator3", "0.1")
 import subprocess
-import os
 import threading
 import time
+
+from gi.repository import AppIndicator3, Gdk, GLib, Gtk
+
 
 class PdaNetGUI(Gtk.Window):
     def __init__(self):
@@ -97,9 +99,7 @@ class PdaNetGUI(Gtk.Window):
         style_provider = Gtk.CssProvider()
         style_provider.load_from_data(css)
         Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            style_provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            Gdk.Screen.get_default(), style_provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
     def setup_ui(self):
@@ -143,7 +143,7 @@ class PdaNetGUI(Gtk.Window):
         main_box.pack_start(separator1, False, False, 0)
 
         # Connect/Disconnect button
-        self.main_button = Gtk.Button(label="🔌 CONNECT")
+        self.main_button = Gtk.Button(label="CONNECT")
         self.main_button.get_style_context().add_class("big-button")
         self.main_button.get_style_context().add_class("connect-button")
         self.main_button.connect("clicked", self.on_main_button_clicked)
@@ -154,7 +154,7 @@ class PdaNetGUI(Gtk.Window):
         stealth_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         stealth_box.set_halign(Gtk.Align.CENTER)
 
-        stealth_label = Gtk.Label(label="🕶️ Stealth Mode (Hide Tethering):")
+        stealth_label = Gtk.Label(label="Stealth Mode (Hide Tethering):")
         stealth_box.pack_start(stealth_label, False, False, 0)
 
         self.stealth_switch = Gtk.Switch()
@@ -171,7 +171,7 @@ class PdaNetGUI(Gtk.Window):
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         button_box.set_homogeneous(True)
 
-        about_btn = Gtk.Button(label="ℹ️ About")
+        about_btn = Gtk.Button(label="About")
         about_btn.connect("clicked", self.show_about)
         button_box.pack_start(about_btn, True, True, 0)
 
@@ -184,9 +184,7 @@ class PdaNetGUI(Gtk.Window):
     def setup_indicator(self):
         """Setup system tray indicator"""
         self.indicator = AppIndicator3.Indicator.new(
-            "pdanet-linux",
-            "network-wireless",
-            AppIndicator3.IndicatorCategory.APPLICATION_STATUS
+            "pdanet-linux", "network-wireless", AppIndicator3.IndicatorCategory.APPLICATION_STATUS
         )
         self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self.indicator.set_title("PdaNet Linux")
@@ -228,29 +226,29 @@ class PdaNetGUI(Gtk.Window):
                 # Check if redsocks is running
                 result = subprocess.run(
                     ["systemctl", "is-active", "redsocks"],
+                    check=False,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 is_connected = result.stdout.strip() == "active"
 
                 # Check stealth mode
                 result = subprocess.run(
                     ["sudo", "-n", "iptables", "-t", "mangle", "-L", "PDANET_STEALTH"],
+                    check=False,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 is_stealth = result.returncode == 0
 
                 # Check interface
                 result = subprocess.run(
-                    ["ip", "link", "show"],
-                    capture_output=True,
-                    text=True
+                    ["ip", "link", "show"], check=False, capture_output=True, text=True
                 )
                 interface = "Not detected"
-                for line in result.stdout.split('\n'):
-                    if 'usb' in line or 'rndis' in line:
-                        interface = line.split(':')[1].strip().split('@')[0]
+                for line in result.stdout.split("\n"):
+                    if "usb" in line or "rndis" in line:
+                        interface = line.split(":")[1].strip().split("@")[0]
                         break
 
                 GLib.idle_add(self.update_ui_state, is_connected, is_stealth, interface)
@@ -269,14 +267,14 @@ class PdaNetGUI(Gtk.Window):
 
         if is_connected:
             self.status_label.set_markup("<span class='status-connected'>● CONNECTED</span>")
-            self.main_button.set_label("🔌 DISCONNECT")
+            self.main_button.set_label("DISCONNECT")
             self.main_button.get_style_context().remove_class("connect-button")
             self.main_button.get_style_context().add_class("disconnect-button")
             self.tray_action_item.set_label("Disconnect")
             self.indicator.set_icon("network-wireless-connected")
         else:
             self.status_label.set_markup("<span class='status-disconnected'>● DISCONNECTED</span>")
-            self.main_button.set_label("🔌 CONNECT")
+            self.main_button.set_label("CONNECT")
             self.main_button.get_style_context().remove_class("disconnect-button")
             self.main_button.get_style_context().add_class("connect-button")
             self.tray_action_item.set_label("Connect")
@@ -301,19 +299,23 @@ class PdaNetGUI(Gtk.Window):
                 if self.connected:
                     # Disconnect
                     subprocess.run(
-                        ["sudo", "/home/wtyler/pdanet-linux/pdanet-disconnect"],
-                        check=True
+                        ["sudo", "/home/wtyler/pdanet-linux/pdanet-disconnect"], check=True
                     )
-                    GLib.idle_add(self.show_notification, "Disconnected", "PdaNet connection closed")
+                    GLib.idle_add(
+                        self.show_notification, "Disconnected", "PdaNet connection closed"
+                    )
                 else:
                     # Connect
                     result = subprocess.run(
                         ["sudo", "/home/wtyler/pdanet-linux/pdanet-connect"],
+                        check=False,
                         capture_output=True,
-                        text=True
+                        text=True,
                     )
                     if result.returncode == 0:
-                        GLib.idle_add(self.show_notification, "Connected", "PdaNet connection established!")
+                        GLib.idle_add(
+                            self.show_notification, "Connected", "PdaNet connection established!"
+                        )
                     else:
                         GLib.idle_add(self.show_error, "Connection Failed", result.stderr)
             except Exception as e:
@@ -333,8 +335,7 @@ class PdaNetGUI(Gtk.Window):
             try:
                 cmd = "enable" if enabled else "disable"
                 subprocess.run(
-                    ["sudo", "/home/wtyler/pdanet-linux/scripts/stealth-mode.sh", cmd],
-                    check=True
+                    ["sudo", "/home/wtyler/pdanet-linux/scripts/stealth-mode.sh", cmd], check=True
                 )
                 GLib.idle_add(self.update_status)
             except Exception as e:
@@ -353,7 +354,7 @@ class PdaNetGUI(Gtk.Window):
             flags=0,
             message_type=Gtk.MessageType.INFO,
             buttons=Gtk.ButtonsType.OK,
-            text=title
+            text=title,
         )
         dialog.format_secondary_text(message)
         dialog.run()
@@ -366,7 +367,7 @@ class PdaNetGUI(Gtk.Window):
             flags=0,
             message_type=Gtk.MessageType.ERROR,
             buttons=Gtk.ButtonsType.OK,
-            text=title
+            text=title,
         )
         dialog.format_secondary_text(message)
         dialog.run()
@@ -393,20 +394,24 @@ class PdaNetGUI(Gtk.Window):
             flags=0,
             message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.YES_NO,
-            text="Quit PdaNet Linux?"
+            text="Quit PdaNet Linux?",
         )
-        dialog.format_secondary_text("This will close the GUI but won't disconnect active connections.")
+        dialog.format_secondary_text(
+            "This will close the GUI but won't disconnect active connections."
+        )
         response = dialog.run()
         dialog.destroy()
 
         if response == Gtk.ResponseType.YES:
             Gtk.main_quit()
 
+
 def main():
     app = PdaNetGUI()
     app.connect("destroy", Gtk.main_quit)
     app.show_all()
     Gtk.main()
+
 
 if __name__ == "__main__":
     main()

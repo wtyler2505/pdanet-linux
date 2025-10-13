@@ -152,7 +152,7 @@ chmod +x "$PROJECT_DIR/pdanet-iphone-disconnect"
 
 echo -e "${GREEN}✓${NC} Commands installed to /usr/local/bin"
 
-echo -e "${YELLOW}[7/7]${NC} Installing GUI desktop launcher..."
+echo -e "${YELLOW}[7/8]${NC} Installing GUI desktop launcher..."
 
 # Install desktop file
 cp "$PROJECT_DIR/config/pdanet-linux.desktop" /usr/share/applications/pdanet-linux.desktop
@@ -164,6 +164,13 @@ if command -v update-desktop-database &> /dev/null; then
 fi
 
 echo -e "${GREEN}✓${NC} GUI installed to application menu"
+
+echo -e "${YELLOW}[8/8]${NC} Installing PolicyKit actions (pkexec)..."
+
+# Install Polkit policy for pkexec prompts
+POLKIT_DIR="/usr/share/polkit-1/actions"
+install -m 0644 "$PROJECT_DIR/config/polkit/org.pdanetlinux.pkexec.policy" "$POLKIT_DIR/org.pdanetlinux.pkexec.policy"
+echo -e "${GREEN}✓${NC} Polkit actions installed"
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════╗${NC}"

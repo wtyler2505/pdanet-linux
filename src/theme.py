@@ -45,6 +45,7 @@ For text transformations, use Python string methods or Pango markup:
 - Pango: label.set_markup('<span size="large">TEXT</span>')
 """
 
+
 # Color Palette
 class Colors:
     # Base
@@ -72,6 +73,15 @@ class Colors:
     STATUS_INACTIVE = RED
     STATUS_WARNING = ORANGE
     STATUS_INFO = TEXT_GRAY
+
+    # Legacy aliases for visual testing suite
+    BG_PRIMARY = BLACK
+    BG_SECONDARY = DARK_GRAY
+    SUCCESS = GREEN
+    ERROR = RED
+    WARNING = YELLOW
+    INFO = TEXT_GRAY
+
 
 # GTK CSS Theme
 def get_css():
@@ -283,8 +293,25 @@ def get_css():
     }}
     """
 
+
 # UI Text Formatting
 class Format:
+    @staticmethod
+    def bold(text):
+        return f"<b>{text}</b>"
+
+    @staticmethod
+    def color(text, color_code):
+        return f"<span foreground='{color_code}'>{text}</span>"
+
+    @staticmethod
+    def monospace(text):
+        return f"<span font_family='monospace'>{text}</span>"
+
+    @staticmethod
+    def uppercase(text):
+        return text.upper() if isinstance(text, str) else text
+
     @staticmethod
     def status_active():
         return "● ACTIVE"
@@ -331,7 +358,9 @@ class Format:
     def format_timestamp():
         """Format current timestamp for logs"""
         from datetime import datetime
+
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+
 
 # ASCII Art / Decorative Elements
 class ASCII:

@@ -4,29 +4,30 @@ Visual Test Runner - Orchestrates all visual testing
 Main entry point for running comprehensive visual tests
 """
 
+import argparse
+import json
 import os
 import sys
 import time
-import json
-import argparse
-from pathlib import Path
-from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 # Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from test_visual_regression import VisualTestRunner, VisualTestConfig
-from test_responsive import ResponsiveTestRunner, ResponsiveTestConfig
-from test_accessibility import AccessibilityTestRunner, AccessibilityConfig
-from test_components import ComponentTester, ComponentTestConfig
+from test_accessibility import AccessibilityConfig, AccessibilityTestRunner
+from test_components import ComponentTestConfig, ComponentTester
+from test_responsive import ResponsiveTestConfig, ResponsiveTestRunner
+from test_visual_regression import VisualTestConfig, VisualTestRunner
+
 from logger import get_logger
 
 logger = get_logger()
 
+
 @dataclass
 class VisualTestSuite:
     """Complete visual test suite configuration"""
+
     run_regression: bool = True
     run_responsive: bool = True
     run_accessibility: bool = True
@@ -35,6 +36,7 @@ class VisualTestSuite:
     update_baselines: bool = False
     output_dir: str = "tests/visual/reports"
     parallel_execution: bool = False
+
 
 class ComprehensiveVisualTestRunner:
     """Orchestrates all visual testing suites"""
@@ -45,7 +47,7 @@ class ComprehensiveVisualTestRunner:
         self.start_time = None
         self.end_time = None
 
-    def run_all_tests(self) -> Dict:
+    def run_all_tests(self) -> dict:
         """Run complete visual test suite"""
         self.start_time = time.time()
         logger.info("Starting comprehensive visual test suite")
@@ -57,37 +59,39 @@ class ComprehensiveVisualTestRunner:
             # Run visual regression tests
             if self.suite_config.run_regression:
                 logger.info("Running visual regression tests...")
-                self.test_results['regression'] = self._run_regression_tests()
+                self.test_results["regression"] = self._run_regression_tests()
 
             # Run responsive tests
             if self.suite_config.run_responsive:
                 logger.info("Running responsive design tests...")
-                self.test_results['responsive'] = self._run_responsive_tests()
+                self.test_results["responsive"] = self._run_responsive_tests()
 
             # Run accessibility tests
             if self.suite_config.run_accessibility:
                 logger.info("Running accessibility tests...")
-                self.test_results['accessibility'] = self._run_accessibility_tests()
+                self.test_results["accessibility"] = self._run_accessibility_tests()
 
             # Run component tests
             if self.suite_config.run_components:
                 logger.info("Running component tests...")
-                self.test_results['components'] = self._run_component_tests()
+                self.test_results["components"] = self._run_component_tests()
 
             self.end_time = time.time()
 
             # Generate comprehensive report
             comprehensive_report = self._generate_comprehensive_report()
 
-            logger.info(f"Visual test suite completed in {self.end_time - self.start_time:.2f} seconds")
+            logger.info(
+                f"Visual test suite completed in {self.end_time - self.start_time:.2f} seconds"
+            )
             return comprehensive_report
 
         except Exception as e:
             logger.error(f"Visual test suite failed: {e}")
             self.end_time = time.time()
-            return {'error': str(e), 'completed': False}
+            return {"error": str(e), "completed": False}
 
-    def _run_regression_tests(self) -> Dict:
+    def _run_regression_tests(self) -> dict:
         """Run visual regression tests"""
         try:
             config = VisualTestConfig(
@@ -104,18 +108,18 @@ class ComprehensiveVisualTestRunner:
             report = runner.generate_report(report_path)
 
             return {
-                'completed': True,
-                'passed': report['passed_tests'],
-                'total': report['total_tests'],
-                'report_path': report_path,
-                'results': visual_results
+                "completed": True,
+                "passed": report["passed_tests"],
+                "total": report["total_tests"],
+                "report_path": report_path,
+                "results": visual_results,
             }
 
         except Exception as e:
             logger.error(f"Regression tests failed: {e}")
-            return {'completed': False, 'error': str(e)}
+            return {"completed": False, "error": str(e)}
 
-    def _run_responsive_tests(self) -> Dict:
+    def _run_responsive_tests(self) -> dict:
         """Run responsive design tests"""
         try:
             config = ResponsiveTestConfig()
@@ -127,18 +131,18 @@ class ComprehensiveVisualTestRunner:
             report = runner.generate_responsive_report(report_path)
 
             return {
-                'completed': True,
-                'passed': report['summary']['passed_tests'],
-                'total': report['summary']['total_tests'],
-                'report_path': report_path,
-                'results': responsive_results
+                "completed": True,
+                "passed": report["summary"]["passed_tests"],
+                "total": report["summary"]["total_tests"],
+                "report_path": report_path,
+                "results": responsive_results,
             }
 
         except Exception as e:
             logger.error(f"Responsive tests failed: {e}")
-            return {'completed': False, 'error': str(e)}
+            return {"completed": False, "error": str(e)}
 
-    def _run_accessibility_tests(self) -> Dict:
+    def _run_accessibility_tests(self) -> dict:
         """Run accessibility tests"""
         try:
             config = AccessibilityConfig()
@@ -149,7 +153,7 @@ class ComprehensiveVisualTestRunner:
 
             if not screenshot_paths:
                 logger.warning("No screenshots available for accessibility testing")
-                return {'completed': False, 'error': 'No screenshots available'}
+                return {"completed": False, "error": "No screenshots available"}
 
             accessibility_results = runner.run_accessibility_tests(screenshot_paths)
 
@@ -158,18 +162,18 @@ class ComprehensiveVisualTestRunner:
             report = runner.generate_accessibility_report(report_path)
 
             return {
-                'completed': True,
-                'passed': report['summary']['passed_tests'],
-                'total': report['summary']['total_tests'],
-                'report_path': report_path,
-                'results': accessibility_results
+                "completed": True,
+                "passed": report["summary"]["passed_tests"],
+                "total": report["summary"]["total_tests"],
+                "report_path": report_path,
+                "results": accessibility_results,
             }
 
         except Exception as e:
             logger.error(f"Accessibility tests failed: {e}")
-            return {'completed': False, 'error': str(e)}
+            return {"completed": False, "error": str(e)}
 
-    def _run_component_tests(self) -> Dict:
+    def _run_component_tests(self) -> dict:
         """Run component-level tests"""
         try:
             config = ComponentTestConfig()
@@ -181,18 +185,18 @@ class ComprehensiveVisualTestRunner:
             report = tester.generate_component_report(report_path)
 
             return {
-                'completed': True,
-                'passed': report['summary']['passed_components'],
-                'total': report['summary']['total_components'],
-                'report_path': report_path,
-                'results': component_results
+                "completed": True,
+                "passed": report["summary"]["passed_components"],
+                "total": report["summary"]["total_components"],
+                "report_path": report_path,
+                "results": component_results,
             }
 
         except Exception as e:
             logger.error(f"Component tests failed: {e}")
-            return {'completed': False, 'error': str(e)}
+            return {"completed": False, "error": str(e)}
 
-    def _get_available_screenshots(self) -> List[str]:
+    def _get_available_screenshots(self) -> list[str]:
         """Get list of available screenshots for testing"""
         screenshot_paths = []
 
@@ -200,49 +204,59 @@ class ComprehensiveVisualTestRunner:
         regression_dir = os.path.join(self.suite_config.output_dir, "regression/screenshots")
         if os.path.exists(regression_dir):
             for file in os.listdir(regression_dir):
-                if file.endswith('.png'):
+                if file.endswith(".png"):
                     screenshot_paths.append(os.path.join(regression_dir, file))
 
         # Check component screenshots
         component_dir = "tests/visual/components"
         if os.path.exists(component_dir):
             for file in os.listdir(component_dir):
-                if file.endswith('.png'):
+                if file.endswith(".png"):
                     screenshot_paths.append(os.path.join(component_dir, file))
 
         return screenshot_paths
 
-    def _generate_comprehensive_report(self) -> Dict:
+    def _generate_comprehensive_report(self) -> dict:
         """Generate comprehensive test report"""
         report = {
-            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'execution_time': self.end_time - self.start_time if self.end_time else 0,
-            'suite_config': asdict(self.suite_config),
-            'summary': {
-                'total_test_suites': len([k for k, v in self.test_results.items() if v.get('completed', False)]),
-                'passed_test_suites': len([k for k, v in self.test_results.items() if v.get('completed', False) and v.get('passed', 0) == v.get('total', 1)]),
-                'total_tests': sum(v.get('total', 0) for v in self.test_results.values()),
-                'total_passed': sum(v.get('passed', 0) for v in self.test_results.values()),
-                'overall_pass_rate': 0,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "execution_time": self.end_time - self.start_time if self.end_time else 0,
+            "suite_config": asdict(self.suite_config),
+            "summary": {
+                "total_test_suites": len(
+                    [k for k, v in self.test_results.items() if v.get("completed", False)]
+                ),
+                "passed_test_suites": len(
+                    [
+                        k
+                        for k, v in self.test_results.items()
+                        if v.get("completed", False) and v.get("passed", 0) == v.get("total", 1)
+                    ]
+                ),
+                "total_tests": sum(v.get("total", 0) for v in self.test_results.values()),
+                "total_passed": sum(v.get("passed", 0) for v in self.test_results.values()),
+                "overall_pass_rate": 0,
             },
-            'test_results': self.test_results,
-            'recommendations': [],
-            'next_steps': []
+            "test_results": self.test_results,
+            "recommendations": [],
+            "next_steps": [],
         }
 
         # Calculate overall pass rate
-        if report['summary']['total_tests'] > 0:
-            report['summary']['overall_pass_rate'] = (
-                report['summary']['total_passed'] / report['summary']['total_tests'] * 100
+        if report["summary"]["total_tests"] > 0:
+            report["summary"]["overall_pass_rate"] = (
+                report["summary"]["total_passed"] / report["summary"]["total_tests"] * 100
             )
 
         # Generate recommendations based on results
-        report['recommendations'] = self._generate_recommendations()
-        report['next_steps'] = self._generate_next_steps()
+        report["recommendations"] = self._generate_recommendations()
+        report["next_steps"] = self._generate_next_steps()
 
         # Save comprehensive report
-        report_path = os.path.join(self.suite_config.output_dir, "comprehensive_visual_test_report.json")
-        with open(report_path, 'w') as f:
+        report_path = os.path.join(
+            self.suite_config.output_dir, "comprehensive_visual_test_report.json"
+        )
+        with open(report_path, "w") as f:
             json.dump(report, f, indent=2)
 
         # Generate HTML report
@@ -252,49 +266,65 @@ class ComprehensiveVisualTestRunner:
         logger.info(f"Comprehensive report generated: {report_path}")
         return report
 
-    def _generate_recommendations(self) -> List[str]:
+    def _generate_recommendations(self) -> list[str]:
         """Generate recommendations based on test results"""
         recommendations = []
 
         # Analyze regression test results
-        if 'regression' in self.test_results:
-            regression = self.test_results['regression']
-            if regression.get('completed') and regression.get('passed', 0) < regression.get('total', 1):
-                recommendations.append("Review and update visual baselines for failing regression tests")
+        if "regression" in self.test_results:
+            regression = self.test_results["regression"]
+            if regression.get("completed") and regression.get("passed", 0) < regression.get(
+                "total", 1
+            ):
+                recommendations.append(
+                    "Review and update visual baselines for failing regression tests"
+                )
 
         # Analyze responsive test results
-        if 'responsive' in self.test_results:
-            responsive = self.test_results['responsive']
-            if responsive.get('completed') and responsive.get('passed', 0) < responsive.get('total', 1):
+        if "responsive" in self.test_results:
+            responsive = self.test_results["responsive"]
+            if responsive.get("completed") and responsive.get("passed", 0) < responsive.get(
+                "total", 1
+            ):
                 recommendations.append("Improve responsive design for failed breakpoints")
 
         # Analyze accessibility results
-        if 'accessibility' in self.test_results:
-            accessibility = self.test_results['accessibility']
-            if accessibility.get('completed') and accessibility.get('passed', 0) < accessibility.get('total', 1):
+        if "accessibility" in self.test_results:
+            accessibility = self.test_results["accessibility"]
+            if accessibility.get("completed") and accessibility.get(
+                "passed", 0
+            ) < accessibility.get("total", 1):
                 recommendations.append("Address accessibility issues to meet WCAG AA standards")
 
         # Analyze component results
-        if 'components' in self.test_results:
-            components = self.test_results['components']
-            if components.get('completed') and components.get('passed', 0) < components.get('total', 1):
+        if "components" in self.test_results:
+            components = self.test_results["components"]
+            if components.get("completed") and components.get("passed", 0) < components.get(
+                "total", 1
+            ):
                 recommendations.append("Fix component-level visual inconsistencies")
 
         # General recommendations
         if not recommendations:
-            recommendations.append("All visual tests passed - consider implementing automated visual testing in CI/CD")
+            recommendations.append(
+                "All visual tests passed - consider implementing automated visual testing in CI/CD"
+            )
         else:
             recommendations.append("Integrate visual testing into development workflow")
             recommendations.append("Set up baseline management process")
 
         return recommendations
 
-    def _generate_next_steps(self) -> List[str]:
+    def _generate_next_steps(self) -> list[str]:
         """Generate next steps based on results"""
         next_steps = []
 
         # Check if any tests failed
-        failed_suites = [k for k, v in self.test_results.items() if not v.get('completed', True) or v.get('passed', 0) < v.get('total', 1)]
+        failed_suites = [
+            k
+            for k, v in self.test_results.items()
+            if not v.get("completed", True) or v.get("passed", 0) < v.get("total", 1)
+        ]
 
         if failed_suites:
             next_steps.append(f"Address failing test suites: {', '.join(failed_suites)}")
@@ -312,7 +342,7 @@ class ComprehensiveVisualTestRunner:
 
         return next_steps
 
-    def _generate_html_report(self, report_data: Dict, output_path: str):
+    def _generate_html_report(self, report_data: dict, output_path: str):
         """Generate HTML report for better visualization"""
         html_content = f"""
 <!DOCTYPE html>
@@ -354,8 +384,13 @@ class ComprehensiveVisualTestRunner:
 """
 
         # Add test suite details
-        for suite_name, suite_result in report_data['test_results'].items():
-            status = "PASS" if suite_result.get('completed') and suite_result.get('passed', 0) == suite_result.get('total', 1) else "FAIL"
+        for suite_name, suite_result in report_data["test_results"].items():
+            status = (
+                "PASS"
+                if suite_result.get("completed")
+                and suite_result.get("passed", 0) == suite_result.get("total", 1)
+                else "FAIL"
+            )
             status_class = "pass" if status == "PASS" else "fail"
 
             html_content += f"""
@@ -372,7 +407,7 @@ class ComprehensiveVisualTestRunner:
         <h2>Recommendations</h2>
         <ul>
 """
-        for rec in report_data['recommendations']:
+        for rec in report_data["recommendations"]:
             html_content += f"            <li>{rec}</li>\n"
 
         html_content += """
@@ -383,7 +418,7 @@ class ComprehensiveVisualTestRunner:
         <h2>Next Steps</h2>
         <ul>
 """
-        for step in report_data['next_steps']:
+        for step in report_data["next_steps"]:
             html_content += f"            <li>{step}</li>\n"
 
         html_content += """
@@ -392,24 +427,29 @@ class ComprehensiveVisualTestRunner:
 </body>
 </html>"""
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             f.write(html_content)
 
         logger.info(f"HTML report generated: {output_path}")
+
 
 def main():
     """Main entry point for visual test runner"""
     parser = argparse.ArgumentParser(description="PdaNet Linux Visual Test Runner")
 
-    parser.add_argument('--regression', action='store_true', help='Run only regression tests')
-    parser.add_argument('--responsive', action='store_true', help='Run only responsive tests')
-    parser.add_argument('--accessibility', action='store_true', help='Run only accessibility tests')
-    parser.add_argument('--components', action='store_true', help='Run only component tests')
-    parser.add_argument('--all', action='store_true', default=True, help='Run all test suites (default)')
-    parser.add_argument('--create-baselines', action='store_true', help='Create new baselines')
-    parser.add_argument('--update-baselines', action='store_true', help='Update existing baselines')
-    parser.add_argument('--output-dir', default='tests/visual/reports', help='Output directory for reports')
-    parser.add_argument('--parallel', action='store_true', help='Run tests in parallel')
+    parser.add_argument("--regression", action="store_true", help="Run only regression tests")
+    parser.add_argument("--responsive", action="store_true", help="Run only responsive tests")
+    parser.add_argument("--accessibility", action="store_true", help="Run only accessibility tests")
+    parser.add_argument("--components", action="store_true", help="Run only component tests")
+    parser.add_argument(
+        "--all", action="store_true", default=True, help="Run all test suites (default)"
+    )
+    parser.add_argument("--create-baselines", action="store_true", help="Create new baselines")
+    parser.add_argument("--update-baselines", action="store_true", help="Update existing baselines")
+    parser.add_argument(
+        "--output-dir", default="tests/visual/reports", help="Output directory for reports"
+    )
+    parser.add_argument("--parallel", action="store_true", help="Run tests in parallel")
 
     args = parser.parse_args()
 
@@ -422,7 +462,7 @@ def main():
         create_baselines=args.create_baselines,
         update_baselines=args.update_baselines,
         output_dir=args.output_dir,
-        parallel_execution=args.parallel
+        parallel_execution=args.parallel,
     )
 
     # Run tests
@@ -430,19 +470,22 @@ def main():
     report = runner.run_all_tests()
 
     # Print summary
-    if 'error' in report:
+    if "error" in report:
         print(f"Visual tests failed: {report['error']}")
         sys.exit(1)
     else:
-        summary = report['summary']
-        print(f"Visual tests completed:")
-        print(f"  Test Suites: {summary['passed_test_suites']}/{summary['total_test_suites']} passed")
+        summary = report["summary"]
+        print("Visual tests completed:")
+        print(
+            f"  Test Suites: {summary['passed_test_suites']}/{summary['total_test_suites']} passed"
+        )
         print(f"  Total Tests: {summary['total_passed']}/{summary['total_tests']} passed")
         print(f"  Pass Rate: {summary['overall_pass_rate']:.1f}%")
 
-        if summary['overall_pass_rate'] < 100:
+        if summary["overall_pass_rate"] < 100:
             print(f"  See reports in: {args.output_dir}")
             sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

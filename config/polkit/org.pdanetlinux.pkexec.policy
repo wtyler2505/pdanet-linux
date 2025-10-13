@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+        "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <action id="org.pdanetlinux.connect">
+    <description>Run PdaNet connection helper</description>
+    <message>Authentication is required to establish a PdaNet connection</message>
+    <icon_name>network-workgroup</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/bin/pdanet-connect</annotate>
+  </action>
+  <action id="org.pdanetlinux.disconnect">
+    <description>Run PdaNet disconnection helper</description>
+    <message>Authentication is required to disconnect PdaNet</message>
+    <icon_name>network-offline</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/bin/pdanet-disconnect</annotate>
+  </action>
+  <action id="org.pdanetlinux.wifi_connect">
+    <description>Run PdaNet WiFi connection helper</description>
+    <message>Authentication is required to establish a PdaNet WiFi connection</message>
+    <icon_name>network-wireless</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/bin/pdanet-wifi-connect</annotate>
+  </action>
+  <action id="org.pdanetlinux.wifi_disconnect">
+    <description>Run PdaNet WiFi disconnection helper</description>
+    <message>Authentication is required to disconnect PdaNet WiFi</message>
+    <icon_name>network-wireless</icon_name>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/local/bin/pdanet-wifi-disconnect</annotate>
+  </action>
+</policyconfig>
+

@@ -5,8 +5,9 @@ Handles settings, profiles, and persistent state
 
 import json
 import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 
 class ConfigManager:
     def __init__(self, config_dir=None):
@@ -41,7 +42,7 @@ class ConfigManager:
             "theme": "dark",
             "window_width": 900,
             "window_height": 600,
-            "single_instance": True
+            "single_instance": True,
         }
 
         # Load or create config
@@ -53,7 +54,7 @@ class ConfigManager:
         """Load configuration from file or create defaults"""
         if self.config_file.exists():
             try:
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file) as f:
                     config = json.load(f)
                     # Merge with defaults (add any new keys)
                     for key, value in self.defaults.items():
@@ -69,7 +70,7 @@ class ConfigManager:
     def save_config(self):
         """Save configuration to file"""
         try:
-            with open(self.config_file, 'w') as f:
+            with open(self.config_file, "w") as f:
                 json.dump(self.config, f, indent=2)
             return True
         except Exception as e:
@@ -95,7 +96,7 @@ class ConfigManager:
         """Load connection profiles"""
         if self.profiles_file.exists():
             try:
-                with open(self.profiles_file, 'r') as f:
+                with open(self.profiles_file) as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Error loading profiles: {e}")
@@ -105,7 +106,7 @@ class ConfigManager:
     def save_profiles(self):
         """Save profiles to file"""
         try:
-            with open(self.profiles_file, 'w') as f:
+            with open(self.profiles_file, "w") as f:
                 json.dump(self.profiles, f, indent=2)
             return True
         except Exception as e:
@@ -114,10 +115,7 @@ class ConfigManager:
 
     def add_profile(self, name, settings):
         """Add or update a connection profile"""
-        self.profiles[name] = {
-            "created": datetime.now().isoformat(),
-            "settings": settings
-        }
+        self.profiles[name] = {"created": datetime.now().isoformat(), "settings": settings}
         self.save_profiles()
 
     def delete_profile(self, name):
@@ -143,7 +141,7 @@ class ConfigManager:
         """Load application state"""
         if self.state_file.exists():
             try:
-                with open(self.state_file, 'r') as f:
+                with open(self.state_file) as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Error loading state: {e}")
@@ -153,7 +151,7 @@ class ConfigManager:
     def save_state(self):
         """Save application state"""
         try:
-            with open(self.state_file, 'w') as f:
+            with open(self.state_file, "w") as f:
                 json.dump(self.state, f, indent=2)
             return True
         except Exception as e:
@@ -178,7 +176,7 @@ class ConfigManager:
 
     def enable_autostart(self):
         """Enable auto-start on boot"""
-        desktop_content = f"""[Desktop Entry]
+        desktop_content = """[Desktop Entry]
 Version=1.0
 Type=Application
 Name=PdaNet Linux
@@ -191,7 +189,7 @@ X-GNOME-Autostart-enabled=true
 """
         try:
             autostart_file = self.get_autostart_file()
-            with open(autostart_file, 'w') as f:
+            with open(autostart_file, "w") as f:
                 f.write(desktop_content)
             os.chmod(autostart_file, 0o755)
             self.set("auto_start", True)
@@ -216,8 +214,10 @@ X-GNOME-Autostart-enabled=true
         """Check if autostart is enabled"""
         return self.get_autostart_file().exists()
 
+
 # Global config instance
 _config_instance = None
+
 
 def get_config():
     """Get or create global config instance"""
