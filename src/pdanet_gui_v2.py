@@ -819,7 +819,10 @@ class PdaNetGUI(Gtk.Window):
         return box
 
     def setup_indicator(self):
-        """Setup system tray indicator"""
+        """
+        Enhanced system tray indicator with full menu
+        P1-FUNC-6: Add system tray integration with full menu
+        """
         if not HAS_APPINDICATOR:
             self.logger.warning("AppIndicator3 not available - system tray disabled")
             self.indicator = None
@@ -833,20 +836,116 @@ class PdaNetGUI(Gtk.Window):
         self.indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self.indicator.set_title("PDANET LINUX")
 
-        # Menu
+        # Enhanced Menu
         menu = Gtk.Menu()
 
+        # Window controls
         show_item = Gtk.MenuItem(label="Show Window")
         show_item.connect("activate", lambda x: self.present())
         menu.append(show_item)
 
+        hide_item = Gtk.MenuItem(label="Hide Window")
+        hide_item.connect("activate", lambda x: self.hide())
+        menu.append(hide_item)
+
         menu.append(Gtk.SeparatorMenuItem())
 
+        # Connection controls with mode selection
+        connection_submenu = Gtk.Menu()
+        connection_item = Gtk.MenuItem(label="Connection")
+        connection_item.set_submenu(connection_submenu)
+        menu.append(connection_item)
+
+        # Main connect/disconnect item
         self.tray_connect_item = Gtk.MenuItem(label="Connect")
         self.tray_connect_item.connect("activate", lambda x: self.on_connect_clicked(None))
-        menu.append(self.tray_connect_item)
+        connection_submenu.append(self.tray_connect_item)
+
+        self.tray_disconnect_item = Gtk.MenuItem(label="Disconnect")
+        self.tray_disconnect_item.connect("activate", lambda x: self.on_disconnect_clicked(None))
+        connection_submenu.append(self.tray_disconnect_item)
+
+        connection_submenu.append(Gtk.SeparatorMenuItem())
+
+        # Mode selection
+        mode_submenu = Gtk.Menu()
+        mode_item = Gtk.MenuItem(label="Connection Mode")
+        mode_item.set_submenu(mode_submenu)
+        connection_submenu.append(mode_item)
+
+        self.tray_usb_item = Gtk.RadioMenuItem(label="USB Mode")
+        self.tray_usb_item.connect("activate", lambda x: self.set_connection_mode("usb"))
+        mode_submenu.append(self.tray_usb_item)
+
+        self.tray_wifi_item = Gtk.RadioMenuItem(group=self.tray_usb_item, label="WiFi Mode")
+        self.tray_wifi_item.connect("activate", lambda x: self.set_connection_mode("wifi"))
+        mode_submenu.append(self.tray_wifi_item)
+
+        self.tray_iphone_item = Gtk.RadioMenuItem(group=self.tray_usb_item, label="iPhone Mode")
+        self.tray_iphone_item.connect("activate", lambda x: self.set_connection_mode("iphone"))
+        mode_submenu.append(self.tray_iphone_item)
 
         menu.append(Gtk.SeparatorMenuItem())
+
+        # Status information
+        status_submenu = Gtk.Menu()
+        status_item = Gtk.MenuItem(label="Status")
+        status_item.set_submenu(status_submenu)
+        menu.append(status_item)
+
+        # Connection status
+        self.tray_status_item = Gtk.MenuItem(label="Status: Disconnected")
+        self.tray_status_item.set_sensitive(False)
+        status_submenu.append(self.tray_status_item)
+
+        # Stealth status
+        self.tray_stealth_item = Gtk.MenuItem(label="Stealth: Disabled")
+        self.tray_stealth_item.set_sensitive(False)
+        status_submenu.append(self.tray_stealth_item)
+
+        # Interface status
+        self.tray_interface_item = Gtk.MenuItem(label="Interface: Not Detected")
+        self.tray_interface_item.set_sensitive(False)
+        status_submenu.append(self.tray_interface_item)
+
+        status_submenu.append(Gtk.SeparatorMenuItem())
+
+        # Quick stats
+        self.tray_stats_item = Gtk.MenuItem(label="Stats: 0.0 KB/s ↓  0.0 KB/s ↑")
+        self.tray_stats_item.set_sensitive(False)
+        status_submenu.append(self.tray_stats_item)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        # Settings and utilities
+        settings_submenu = Gtk.Menu()
+        settings_item = Gtk.MenuItem(label="Settings")
+        settings_item.set_submenu(settings_submenu)
+        menu.append(settings_item)
+
+        # Auto-reconnect toggle
+        self.tray_auto_reconnect = Gtk.CheckMenuItem(label="Auto-Reconnect")
+        self.tray_auto_reconnect.connect("toggled", self.on_tray_auto_reconnect_toggled)
+        settings_submenu.append(self.tray_auto_reconnect)
+
+        settings_submenu.append(Gtk.SeparatorMenuItem())
+
+        # Open settings dialog
+        settings_dialog_item = Gtk.MenuItem(label="Advanced Settings...")
+        settings_dialog_item.connect("activate", lambda x: self.on_settings_clicked(None))
+        settings_submenu.append(settings_dialog_item)
+
+        # Refresh/rescan
+        refresh_item = Gtk.MenuItem(label="Refresh Status")
+        refresh_item.connect("activate", lambda x: self.update_display())
+        settings_submenu.append(refresh_item)
+
+        menu.append(Gtk.SeparatorMenuItem())
+
+        # About and quit
+        about_item = Gtk.MenuItem(label="About")
+        about_item.connect("activate", self.show_about_dialog)
+        menu.append(about_item)
 
         quit_item = Gtk.MenuItem(label="Quit")
         quit_item.connect("activate", self.on_quit)
@@ -854,6 +953,9 @@ class PdaNetGUI(Gtk.Window):
 
         menu.show_all()
         self.indicator.set_menu(menu)
+        
+        # Initialize tray status
+        self.update_tray_status()
 
     def update_header_time(self):
         """Update header timestamp"""
