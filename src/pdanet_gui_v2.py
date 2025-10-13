@@ -992,6 +992,83 @@ class PdaNetGUI(Gtk.Window):
         # Update status panel
         if state == ConnectionState.CONNECTED:
             self.status_state_label.get_children()[1].set_markup(
+                f"<span foreground='{Colors.GREEN}'>● ACTIVE</span>"
+            )
+            self.header_status_label.set_markup(
+                f"<span foreground='{Colors.GREEN}'>[CONNECTED]</span>"
+            )
+        elif state == ConnectionState.CONNECTING:
+            self.status_state_label.get_children()[1].set_markup(
+                f"<span foreground='{Colors.ORANGE}'>◐ CONNECTING</span>"
+            )
+            self.header_status_label.set_markup(
+                f"<span foreground='{Colors.ORANGE}'>[CONNECTING]</span>"
+            )
+        else:
+            self.status_state_label.get_children()[1].set_markup(
+                f"<span foreground='{Colors.RED}'>● INACTIVE</span>"
+            )
+            self.header_status_label.set_markup(
+                f"<span foreground='{Colors.TEXT_GRAY}'>[DISCONNECTED]</span>"
+            )
+
+        # Update interface
+        interface = self.connection.current_interface or "NOT DETECTED"
+        self.status_interface_label.get_children()[1].set_text(interface)
+
+        # Update uptime
+        if is_connected:
+            uptime = self.stats.get_uptime()
+            self.status_uptime_label.get_children()[1].set_text(Format.format_uptime(uptime))
+            self.sb_uptime.set_text(f"UPTIME: {Format.format_uptime(uptime)}")
+        else:
+            self.status_uptime_label.get_children()[1].set_text("00:00:00")
+            self.sb_uptime.set_text("UPTIME: 00:00:00")
+
+        # Update metrics
+        if is_connected:
+            dl_rate = self.stats.get_current_download_rate()
+            ul_rate = self.stats.get_current_upload_rate()
+
+            self.metric_download_label.get_children()[1].set_text(Format.format_bandwidth(dl_rate))
+            self.metric_upload_label.get_children()[1].set_text(Format.format_bandwidth(ul_rate))
+
+            total_dl = self.stats.get_total_downloaded()
+            total_ul = self.stats.get_total_uploaded()
+            self.metric_total_label.get_children()[1].set_text(
+                f"↓ {Format.format_bytes(total_dl)}  ↑ {Format.format_bytes(total_ul)}"
+            )
+
+            # Check data usage warnings
+            self.check_data_usage_warnings(total_dl, total_ul)
+
+            # Network rate for statusbar
+            self.sb_network.set_text(f"NET: {Format.format_bandwidth(dl_rate + ul_rate)}")
+        else:
+            self.metric_download_label.get_children()[1].set_text("0.0 KB/s")
+            self.metric_upload_label.get_children()[1].set_text("0.0 KB/s")
+            self.metric_total_label.get_children()[1].set_text("↓ 0B  ↑ 0B")
+            self.sb_network.set_text("NET: 0.0 MB/s")
+
+        # Update log
+        self.update_log_display()
+
+        # Update stealth status (P1-FUNC-8: Real-time stealth status display)
+        self.update_stealth_status()
+
+        # Statusbar
+        state_text = "ACTIVE" if is_connected else "INACTIVE"
+        self.sb_status.set_text(f"SYS: {state_text}")
+
+        # Update network quality indicator
+        if is_connected:
+            self.update_network_quality()
+
+        # Update system tray status (P1-FUNC-6)
+        self.update_tray_status()
+
+        return True
+
     def update_tray_status(self):
         """Update system tray menu with current status information"""
         if not self.indicator:
