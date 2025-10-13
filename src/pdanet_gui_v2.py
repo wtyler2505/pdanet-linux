@@ -47,9 +47,11 @@ except (ValueError, ImportError):
 
 import fcntl
 import json
+import shutil
 import subprocess
 import time
 from datetime import datetime
+from pathlib import Path
 
 # Add src directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
