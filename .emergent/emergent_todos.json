@@ -1,30 +1,34 @@
 [
   {
-    "content": "Run comprehensive unit tests suite to identify any issues",
-    "status": "completed"
+    "content": "Add connection history viewer dialog in GUI",
+    "status": "in_progress"
   },
   {
-    "content": "Test connection manager and stats collector modules",
-    "status": "completed"
+    "content": "Implement data usage warnings/alerts system",
+    "status": "pending"
   },
   {
-    "content": "Review and analyze code quality issues (linting, type checking)",
-    "status": "completed"
+    "content": "Add keyboard shortcuts for common actions",
+    "status": "pending"
   },
   {
-    "content": "Check for security vulnerabilities and best practices",
-    "status": "completed"
+    "content": "Create bandwidth usage graph visualization",
+    "status": "pending"
   },
   {
-    "content": "Test GUI components in headless mode",
-    "status": "completed"
+    "content": "Add quick-switch connection profiles",
+    "status": "pending"
   },
   {
-    "content": "Identify and implement improvements/enhancements",
-    "status": "completed"
+    "content": "Implement network quality visual indicator",
+    "status": "pending"
   },
   {
-    "content": "Update documentation if needed",
-    "status": "completed"
+    "content": "Add export settings functionality",
+    "status": "pending"
+  },
+  {
+    "content": "Create first-run setup wizard",
+    "status": "pending"
   }
 ]
