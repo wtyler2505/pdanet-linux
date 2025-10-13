@@ -13,11 +13,11 @@
   },
   {
     "content": "Implement network quality visual indicator",
-    "status": "in_progress"
+    "status": "completed"
   },
   {
     "content": "Add export/import settings functionality",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "Create bandwidth usage graph visualization",
