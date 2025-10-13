@@ -159,3 +159,7 @@ tests/visual/reports/*
 *.env
 *.env.*
 .mcp.json.bkp
+-e 
+# Environment files
+*.env
+*.env.*
