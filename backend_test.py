@@ -1093,11 +1093,15 @@ test_suites = {
     "Enhanced WiFi Scanning (P1-FUNC-5)": [],
     "Real-time Stealth Status (P1-FUNC-8)": [],
     "Connection Status Integration": [],
-    "Import and Module Integration": []
+    "Import and Module Integration": [],
+    "P2 Performance Optimization": [],
+    "P2 High-Performance Stats Collector": [],
+    "P2 Reliability Manager": [],
+    "P2 Enhanced Connection Manager Integration": []
 }
 
 suite_names = list(test_suites.keys())
-tests_per_suite = [5, 5, 5, 5, 5, 5]  # Number of tests in each suite
+tests_per_suite = [5, 5, 5, 5, 5, 5, 5, 6, 7, 6]  # Number of tests in each suite
 current_suite = 0
 current_count = 0
 
