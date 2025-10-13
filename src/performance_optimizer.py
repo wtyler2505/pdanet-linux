@@ -220,7 +220,7 @@ class ResourceManager:
         while self._monitoring:
             try:
                 # Track memory usage
-                memory_info = self.memory_optimizer.track_memory_usage()
+                self.memory_optimizer.track_memory_usage()
                 
                 # Check memory growth trend
                 trend = self.memory_optimizer.get_memory_trend()
