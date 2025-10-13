@@ -1,15 +1,15 @@
 [
   {
     "content": "Add connection history viewer dialog in GUI",
-    "status": "in_progress"
-  },
-  {
-    "content": "Implement data usage warnings/alerts system",
-    "status": "pending"
+    "status": "completed"
   },
   {
     "content": "Add keyboard shortcuts for common actions",
-    "status": "pending"
+    "status": "completed"
+  },
+  {
+    "content": "Implement data usage warnings/alerts system",
+    "status": "in_progress"
   },
   {
     "content": "Create bandwidth usage graph visualization",
