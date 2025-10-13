@@ -3,10 +3,14 @@ PdaNet Linux - Statistics Collector
 Tracks bandwidth, connection quality, and usage metrics
 """
 
+import json
 import subprocess
 import time
 from collections import deque
+from datetime import datetime
 from pathlib import Path
+
+CONFIG_DIR = str(Path.home() / ".config" / "pdanet-linux")
 
 
 def get_logger():
