@@ -1179,45 +1179,48 @@ class PdaNetGUI(Gtk.Window):
         dialog.destroy()
 
     def update_stealth_status(self):
-        interface = self.connection.current_interface or "NOT DETECTED"
-        self.status_interface_label.get_children()[1].set_text(interface)
-
-        # Update uptime
-        if is_connected:
-            uptime = self.stats.get_uptime()
-            self.status_uptime_label.get_children()[1].set_text(Format.format_uptime(uptime))
-            self.sb_uptime.set_text(f"UPTIME: {Format.format_uptime(uptime)}")
-        else:
-            self.status_uptime_label.get_children()[1].set_text("00:00:00")
-            self.sb_uptime.set_text("UPTIME: 00:00:00")
-
-        # Update metrics
-        if is_connected:
-            dl_rate = self.stats.get_current_download_rate()
-            ul_rate = self.stats.get_current_upload_rate()
-
-            self.metric_download_label.get_children()[1].set_text(Format.format_bandwidth(dl_rate))
-            self.metric_upload_label.get_children()[1].set_text(Format.format_bandwidth(ul_rate))
-
-            total_dl = self.stats.get_total_downloaded()
-            total_ul = self.stats.get_total_uploaded()
-            self.metric_total_label.get_children()[1].set_text(
-                f"↓ {Format.format_bytes(total_dl)}  ↑ {Format.format_bytes(total_ul)}"
-            )
-
-            # Check data usage warnings
-            self.check_data_usage_warnings(total_dl, total_ul)
-
-            # Network rate for statusbar
-            self.sb_network.set_text(f"NET: {Format.format_bandwidth(dl_rate + ul_rate)}")
-        else:
-            self.metric_download_label.get_children()[1].set_text("0.0 KB/s")
-            self.metric_upload_label.get_children()[1].set_text("0.0 KB/s")
-            self.metric_total_label.get_children()[1].set_text("↓ 0B  ↑ 0B")
-            self.sb_network.set_text("NET: 0.0 MB/s")
-
-        # Update log
-        self.update_log_display()
+        """
+        Update stealth status display with real-time information
+        P1-FUNC-8: Fix stealth status display to show real-time updates
+        """
+        try:
+            # Get stealth status from connection manager
+            stealth_status_str = self.connection.get_stealth_status_string()
+            
+            # Update the status panel stealth label
+            if hasattr(self, 'status_stealth_label'):
+                if "ACTIVE" in stealth_status_str:
+                    self.status_stealth_label.get_children()[1].set_markup(
+                        f"<span foreground='{Colors.GREEN}'>{stealth_status_str}</span>"
+                    )
+                else:
+                    self.status_stealth_label.get_children()[1].set_markup(
+                        f"<span foreground='{Colors.TEXT_GRAY}'>{stealth_status_str}</span>"
+                    )
+            
+            # Update the operations panel stealth status
+            if hasattr(self, 'stealth_status'):
+                if "DISABLED" in stealth_status_str:
+                    self.stealth_status.set_text("[DISABLED]")
+                    self.stealth_status.get_style_context().remove_class("connected")
+                    self.stealth_status.get_style_context().add_class("disconnected")
+                else:
+                    # Extract level for display
+                    if "L1" in stealth_status_str:
+                        display_text = "[L1: BASIC]"
+                    elif "L2" in stealth_status_str:
+                        display_text = "[L2: MODERATE]"
+                    elif "L3" in stealth_status_str:
+                        display_text = "[L3: AGGRESSIVE]"
+                    else:
+                        display_text = "[ACTIVE]"
+                    
+                    self.stealth_status.set_text(display_text)
+                    self.stealth_status.get_style_context().remove_class("disconnected")
+                    self.stealth_status.get_style_context().add_class("connected")
+                    
+        except Exception as e:
+            self.logger.error(f"Failed to update stealth status: {e}")
 
         # Update stealth status (P1-FUNC-8: Real-time stealth status display)
         self.update_stealth_status()
