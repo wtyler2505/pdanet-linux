@@ -1471,6 +1471,45 @@ class PdaNetGUI(Gtk.Window):
         log_frame.add(log_box)
         ui_page.pack_start(log_frame, False, False, 0)
 
+        # Data Usage Warnings
+        data_frame = Gtk.Frame(label="Data Usage Warnings")
+        data_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+        data_box.set_margin_top(10)
+        data_box.set_margin_bottom(10)
+        data_box.set_margin_start(10)
+        data_box.set_margin_end(10)
+
+        enable_warnings_check = Gtk.CheckButton(label="Enable data usage warnings")
+        enable_warnings_check.set_active(self.config.get("enable_data_warnings", True))
+        data_box.pack_start(enable_warnings_check, False, False, 0)
+
+        warning_threshold_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        warning_threshold_label = Gtk.Label(label="Warning at (MB):")
+        warning_threshold_label.set_width_chars(15)
+        warning_threshold_label.set_xalign(0)
+        warning_threshold_spin = Gtk.SpinButton()
+        warning_threshold_spin.set_range(100, 50000)
+        warning_threshold_spin.set_increments(100, 1000)
+        warning_threshold_spin.set_value(self.config.get("data_warning_threshold_mb", 1000))
+        warning_threshold_box.pack_start(warning_threshold_label, False, False, 0)
+        warning_threshold_box.pack_start(warning_threshold_spin, True, True, 0)
+        data_box.pack_start(warning_threshold_box, False, False, 0)
+
+        critical_threshold_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        critical_threshold_label = Gtk.Label(label="Critical at (MB):")
+        critical_threshold_label.set_width_chars(15)
+        critical_threshold_label.set_xalign(0)
+        critical_threshold_spin = Gtk.SpinButton()
+        critical_threshold_spin.set_range(500, 100000)
+        critical_threshold_spin.set_increments(500, 1000)
+        critical_threshold_spin.set_value(self.config.get("data_critical_threshold_mb", 5000))
+        critical_threshold_box.pack_start(critical_threshold_label, False, False, 0)
+        critical_threshold_box.pack_start(critical_threshold_spin, True, True, 0)
+        data_box.pack_start(critical_threshold_box, False, False, 0)
+
+        data_frame.add(data_box)
+        ui_page.pack_start(data_frame, False, False, 0)
+
         notebook.append_page(ui_page, Gtk.Label(label="Interface"))
 
         # Show dialog
