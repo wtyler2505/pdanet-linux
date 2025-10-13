@@ -369,7 +369,7 @@ class HighPerformanceStatsCollector:
         try:
             if hasattr(self, 'resource_manager'):
                 self.resource_manager.stop_monitoring()
-        except:
+        except Exception:
             pass  # Ignore cleanup errors
 
 
