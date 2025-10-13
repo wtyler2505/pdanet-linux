@@ -1170,6 +1170,12 @@ class PdaNetGUI(Gtk.Window):
 
         # Update network quality indicator
         if is_connected:
+            self.update_network_quality()
+
+        # Update system tray status (P1-FUNC-6)
+        self.update_tray_status()
+
+        return True
     def update_stealth_status(self):
         """
         Update stealth status display with real-time information
