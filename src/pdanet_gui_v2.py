@@ -1591,7 +1591,25 @@ class PdaNetGUI(Gtk.Window):
         dialog.show_all()
         response = dialog.run()
 
-        if response == Gtk.ResponseType.OK:
+        if response == Gtk.ResponseType.YES:
+            # Export settings
+            dialog.hide()
+            self.export_settings()
+            dialog.show_all()
+            return  # Keep dialog open
+            
+        elif response == Gtk.ResponseType.APPLY:
+            # Import settings
+            dialog.hide()
+            if self.import_settings():
+                # Reload dialog with imported settings
+                dialog.destroy()
+                self.on_settings_clicked(None)
+                return
+            dialog.show_all()
+            return  # Keep dialog open
+
+        elif response == Gtk.ResponseType.OK:
             # Save settings
             self.config.set("proxy_ip", proxy_ip_entry.get_text())
             self.config.set("proxy_port", int(proxy_port_spin.get_value()))
@@ -1613,6 +1631,118 @@ class PdaNetGUI(Gtk.Window):
             self.logger.ok("Settings saved successfully")
 
         dialog.destroy()
+
+    def export_settings(self):
+        """Export settings to JSON file"""
+        dialog = Gtk.FileChooserDialog(
+            title="Export Settings",
+            parent=self,
+            action=Gtk.FileChooserAction.SAVE
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_SAVE, Gtk.ResponseType.OK
+        )
+        dialog.set_current_name(f"pdanet-settings-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json")
+        
+        # Add file filter
+        filter_json = Gtk.FileFilter()
+        filter_json.set_name("JSON files")
+        filter_json.add_pattern("*.json")
+        dialog.add_filter(filter_json)
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            filepath = dialog.get_filename()
+            try:
+                # Get all config data
+                export_data = {
+                    "settings": self.config.config,
+                    "export_date": datetime.now().isoformat(),
+                    "version": "2.1.0"
+                }
+                
+                with open(filepath, 'w') as f:
+                    json.dump(export_data, f, indent=2)
+                
+                self.logger.ok(f"Settings exported to {filepath}")
+                self.show_notification("Settings Exported", f"Saved to {filepath}", "low")
+            except Exception as e:
+                self.logger.error(f"Export failed: {e}")
+                self.show_notification("Export Failed", str(e), "critical")
+        
+        dialog.destroy()
+
+    def import_settings(self):
+        """Import settings from JSON file"""
+        dialog = Gtk.FileChooserDialog(
+            title="Import Settings",
+            parent=self,
+            action=Gtk.FileChooserAction.OPEN
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OPEN, Gtk.ResponseType.OK
+        )
+        
+        # Add file filter
+        filter_json = Gtk.FileFilter()
+        filter_json.set_name("JSON files")
+        filter_json.add_pattern("*.json")
+        dialog.add_filter(filter_json)
+
+        response = dialog.run()
+        imported = False
+        
+        if response == Gtk.ResponseType.OK:
+            filepath = dialog.get_filename()
+            try:
+                with open(filepath) as f:
+                    import_data = json.load(f)
+                
+                # Validate format
+                if "settings" not in import_data:
+                    raise ValueError("Invalid settings file format")
+                
+                # Confirm import
+                confirm = Gtk.MessageDialog(
+                    transient_for=self,
+                    flags=0,
+                    message_type=Gtk.MessageType.QUESTION,
+                    buttons=Gtk.ButtonsType.YES_NO,
+                    text="Import Settings?"
+                )
+                confirm.format_secondary_text(
+                    f"This will replace your current settings with those from:\n{filepath}\n\n"
+                    f"Export date: {import_data.get('export_date', 'Unknown')}\n"
+                    "Current settings will be backed up."
+                )
+                
+                if confirm.run() == Gtk.ResponseType.YES:
+                    # Backup current settings
+                    backup_file = Path(CONFIG_DIR) / f"config.backup.{int(time.time())}.json"
+                    try:
+                        import shutil
+                        shutil.copy(Path(CONFIG_DIR) / "config.json", backup_file)
+                    except Exception:
+                        pass
+                    
+                    # Import settings
+                    self.config.config = import_data["settings"]
+                    self.config.save()
+                    
+                    imported = True
+                    self.logger.ok(f"Settings imported from {filepath}")
+                    self.show_notification("Settings Imported", "Settings successfully imported. Restart recommended.", "normal")
+                
+                confirm.destroy()
+                
+            except Exception as e:
+                self.logger.error(f"Import failed: {e}")
+                self.show_notification("Import Failed", str(e), "critical")
+        
+        dialog.destroy()
+        return imported
 
     def show_manage_networks_dialog(self):
         """Show dialog to manage saved WiFi networks"""
