@@ -1714,7 +1714,12 @@ class PdaNetGUI(Gtk.Window):
             self.config.set("stealth_level", int(level_combo.get_active_id()))
             self.config.set("autostart", autostart_check.get_active())
             self.config.set("start_minimized", minimize_check.get_active())
-            self.config.set("log_level", verbosity_combo.get_active_id())
+            
+            # Apply log level immediately (Issue #131)
+            new_log_level = verbosity_combo.get_active_id()
+            self.config.set("log_level", new_log_level)
+            self.logger.set_log_level(new_log_level)
+            
             self.config.set("enable_data_warnings", enable_warnings_check.get_active())
             self.config.set("data_warning_threshold_mb", int(warning_threshold_spin.get_value()))
             self.config.set("data_critical_threshold_mb", int(critical_threshold_spin.get_value()))
