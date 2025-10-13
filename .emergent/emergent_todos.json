@@ -1,38 +1,62 @@
 [
   {
-    "content": "Add connection history viewer dialog in GUI",
-    "status": "completed"
-  },
-  {
-    "content": "Add keyboard shortcuts for common actions",
-    "status": "completed"
-  },
-  {
-    "content": "Implement data usage warnings/alerts system",
-    "status": "completed"
-  },
-  {
-    "content": "Implement network quality visual indicator",
-    "status": "completed"
-  },
-  {
-    "content": "Add export/import settings functionality",
-    "status": "completed"
-  },
-  {
-    "content": "Add quick-switch connection profiles",
-    "status": "completed"
-  },
-  {
-    "content": "Create comprehensive documentation",
-    "status": "in_progress"
-  },
-  {
-    "content": "Create bandwidth usage graph visualization",
+    "content": "P0-SEC-1: Migrate all plaintext passwords to keyring with backup and migration path",
     "status": "pending"
   },
   {
-    "content": "Create first-run setup wizard",
+    "content": "P0-SEC-2: Add comprehensive input validation for SSID/password/hostname to prevent injection",
+    "status": "pending"
+  },
+  {
+    "content": "P0-SEC-3: Secure lockfile - move from /tmp to XDG_RUNTIME_DIR with proper permissions",
+    "status": "pending"
+  },
+  {
+    "content": "P0-SEC-4: Unify privilege model - pkexec only, clear error if unavailable",
+    "status": "pending"
+  },
+  {
+    "content": "P0-SEC-5: Create SECURITY.md with threat model and disclosure policy",
+    "status": "pending"
+  },
+  {
+    "content": "P0-SEC-6: Add audit logging for all privileged operations",
+    "status": "pending"
+  },
+  {
+    "content": "P0-SEC-7: Run bandit security scan and fix all HIGH severity issues",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-1: Fix config log level application - ensure logger uses config value",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-2: Implement state transition validation in connection_manager",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-3: Fix thread leaks - proper join/cleanup of monitoring threads",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-4: Replace fragile nmcli parsing with -t -f field selection",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-5: Consolidate connect/disconnect thread logic to remove duplication",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-6: Implement proper error recovery and cleanup on connection failures",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-7: Add bounded ThreadPoolExecutor instead of spawning unlimited threads",
+    "status": "pending"
+  },
+  {
+    "content": "P1-FUNC-8: Fix stealth status display to show real-time updates",
     "status": "pending"
   }
 ]
