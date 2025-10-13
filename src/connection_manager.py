@@ -423,7 +423,14 @@ class ConnectionManager:
         return None
 
     def _detect_wifi_interface(self):
+        """Compatibility method for legacy tests - uses robust detection"""
         try:
+            if self.nm_client.available():
+                wifi_device = self.nm_client.get_connected_wifi_device()
+                if wifi_device:
+                    return wifi_device.interface
+            
+            # Fallback to nmcli
             result = subprocess.run(
                 ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"],
                 check=False,
