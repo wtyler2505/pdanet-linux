@@ -210,9 +210,29 @@ class PdaNetLogger:
 _logger_instance = None
 
 
-def get_logger():
-    """Get or create global logger instance"""
+def get_logger(log_level=None):
+    """
+    Get or create global logger instance
+    
+    Args:
+        log_level: Optional log level to set (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+                  If None and logger exists, keeps current level
+                  If None and logger doesn't exist, tries to read from config
+    """
     global _logger_instance
     if _logger_instance is None:
-        _logger_instance = PdaNetLogger()
+        # Try to get log level from config on first creation
+        if log_level is None:
+            try:
+                from config_manager import get_config
+                config = get_config()
+                log_level = config.get("log_level", "INFO")
+            except Exception:
+                log_level = "INFO"  # Safe default
+        
+        _logger_instance = PdaNetLogger(log_level=log_level)
+    elif log_level is not None:
+        # Update existing logger's level
+        _logger_instance.set_log_level(log_level)
+    
     return _logger_instance
