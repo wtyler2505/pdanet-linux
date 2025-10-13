@@ -1,23 +1,7 @@
 [
   {
-    "content": "P0-SEC-4: Unify privilege model - pkexec only, clear error if unavailable",
-    "status": "completed"
-  },
-  {
-    "content": "P0-SEC-5: Create SECURITY.md with threat model and disclosure policy",
-    "status": "completed"
-  },
-  {
-    "content": "P0-SEC-6: Add audit logging for all privileged operations",
-    "status": "completed"
-  },
-  {
-    "content": "P0-SEC-7: Run bandit security scan and fix all HIGH severity issues",
-    "status": "completed"
-  },
-  {
     "content": "P1-FUNC-1: Fix config log level application - ensure logger uses config value",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "content": "P1-FUNC-2: Implement state transition validation in connection_manager",
@@ -45,10 +29,6 @@
   },
   {
     "content": "P1-FUNC-8: Fix stealth status display to show real-time updates",
-    "status": "pending"
-  },
-  {
-    "content": "Phase P0 Complete - Update plan.md and move to P1",
     "status": "pending"
   }
 ]
