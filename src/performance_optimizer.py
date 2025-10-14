@@ -373,12 +373,19 @@ def resource_context(name: str = "operation"):
             logger.info(f"Resource usage [{name}]: {elapsed:.3f}s, {memory_delta / 1024:.0f}KB")
 
 
-# Global resource manager instance
-_resource_manager = None
+# Global resource manager instance with proper singleton behavior
+_resource_manager_instance = None
+_resource_manager_lock = threading.Lock()
+
 
 def get_resource_manager() -> ResourceManager:
-    """Get global resource manager instance"""
-    global _resource_manager
-    if _resource_manager is None:
-        _resource_manager = ResourceManager()
-    return _resource_manager
+    """Get or create global resource manager instance with thread-safe singleton"""
+    global _resource_manager_instance
+    
+    if _resource_manager_instance is None:
+        with _resource_manager_lock:
+            # Double-check locking pattern
+            if _resource_manager_instance is None:
+                _resource_manager_instance = ResourceManager()
+    
+    return _resource_manager_instance
