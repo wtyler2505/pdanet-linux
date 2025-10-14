@@ -367,24 +367,41 @@ class UserExperienceManager:
         self.usage_stats.total_uptime_hours += duration_seconds / 3600
         self.usage_stats.total_data_gb += data_bytes / (1024 ** 3)
         
-        if duration_seconds > 0:
-            # Update average session duration
-            total_duration = self.usage_stats.average_session_duration * (self.usage_stats.total_sessions - 1) + duration_seconds
+        # Update favorite mode based on most usage
+        mode_counts = getattr(self, '_mode_counts', {})
+        mode_counts[mode] = mode_counts.get(mode, 0) + 1
+        self._mode_counts = mode_counts
+        
+        # Find most used mode
+        if mode_counts:
+            self.usage_stats.favorite_mode = max(mode_counts.items(), key=lambda x: x[1])[0]
+        
+        # Update average session duration properly
+        if self.usage_stats.total_sessions > 1:
+            total_duration = (self.usage_stats.average_session_duration * (self.usage_stats.total_sessions - 1) + 
+                            duration_seconds)
             self.usage_stats.average_session_duration = total_duration / self.usage_stats.total_sessions
-        
-        # Update success rate
-        if success:
-            success_count = (self.usage_stats.success_rate_percent / 100) * (self.usage_stats.total_sessions - 1) + 1
         else:
-            success_count = (self.usage_stats.success_rate_percent / 100) * (self.usage_stats.total_sessions - 1)
+            self.usage_stats.average_session_duration = duration_seconds
         
-        self.usage_stats.success_rate_percent = (success_count / self.usage_stats.total_sessions) * 100
+        # Update success rate properly 
+        if self.usage_stats.total_sessions > 1:
+            previous_successes = (self.usage_stats.success_rate_percent / 100) * (self.usage_stats.total_sessions - 1)
+            current_successes = previous_successes + (1 if success else 0)
+            self.usage_stats.success_rate_percent = (current_successes / self.usage_stats.total_sessions) * 100
+        else:
+            self.usage_stats.success_rate_percent = 100.0 if success else 0.0
         
         # Update weekly usage tracking
         today = datetime.now().strftime("%Y-%m-%d")
-        self.usage_stats.last_week_usage[today] = self.usage_stats.last_week_usage.get(today, 0) + duration_seconds / 3600
+        if not self.usage_stats.last_week_usage:
+            self.usage_stats.last_week_usage = {}
+            
+        self.usage_stats.last_week_usage[today] = (
+            self.usage_stats.last_week_usage.get(today, 0) + duration_seconds / 3600
+        )
         
-        # Keep only last 14 days
+        # Keep only last 14 days  
         cutoff_date = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
         self.usage_stats.last_week_usage = {
             date: hours for date, hours in self.usage_stats.last_week_usage.items() 
