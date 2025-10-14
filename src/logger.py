@@ -221,14 +221,9 @@ def get_logger(log_level=None):
     """
     global _logger_instance
     if _logger_instance is None:
-        # Try to get log level from config on first creation
+        # Use provided log level or safe default (no config dependency)
         if log_level is None:
-            try:
-                from config_manager import get_config
-                config = get_config()
-                log_level = config.get("log_level", "INFO")
-            except Exception:
-                log_level = "INFO"  # Safe default
+            log_level = "INFO"  # Safe default, config can override later
         
         _logger_instance = PdaNetLogger(log_level=log_level)
     elif log_level is not None:
