@@ -1222,6 +1222,9 @@ class PdaNetGUI(Gtk.Window):
         except Exception as e:
             self.logger.error(f"Failed to update stealth status: {e}")
 
+        # iPhone bypass status (shown only when in iPhone mode)
+        self.update_iphone_bypass_status()
+        
     def update_network_quality(self):
         """Calculate and update network quality indicator with color coding"""
         # Get metrics
