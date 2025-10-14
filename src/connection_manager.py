@@ -131,6 +131,10 @@ class ConnectionManager:
         # User experience enhancements (P3)
         self.ux_manager = get_ux_manager()
         
+        # Advanced features (P4)
+        self.network_monitor = get_advanced_network_monitor()
+        self.bandwidth_manager = get_intelligent_bandwidth_manager()
+        
         # Start performance monitoring and reliability checks
         self.resource_manager.start_monitoring(interval=60)
         self.reliability_manager.start_monitoring()
