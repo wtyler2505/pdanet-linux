@@ -733,11 +733,11 @@ class ConnectionManager:
                     )
 
             except Exception as e:
-                error_msg = f"Connection thread error: {e}"
-                self.last_error = error_msg
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(error_msg)
-                self.reliability_manager.report_failure("connection_thread_exception", error_msg)
+                self._handle_error_with_code(
+                    "connection_thread_exception",
+                    f"Connection thread error: {e}",
+                    {"mode": mode, "exception_type": type(e).__name__, "exception_details": str(e)}
+                )
                 self.logger.error(f"Connection thread failed: {e}")
     
     @timed_operation("connection_script")
