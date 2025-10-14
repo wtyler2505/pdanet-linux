@@ -175,3 +175,7 @@ tests/visual/reports/*
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
