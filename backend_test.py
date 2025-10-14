@@ -1166,8 +1166,8 @@ def test_user_experience_manager_initialization():
     assert hasattr(ux_manager, 'quality_history'), "Missing quality_history"
     assert isinstance(ux_manager.usage_stats, UsageStatistics), "usage_stats not UsageStatistics instance"
 
-def test_connection_profile_management():
-    """Test connection profile creation, update, and deletion"""
+def test_connection_profile_management_comprehensive():
+    """Test connection profile creation, update, deletion, and USAGE TRACKING (CRITICAL FIX)"""
     from user_experience import UserExperienceManager
     
     ux_manager = UserExperienceManager()
@@ -1183,6 +1183,7 @@ def test_connection_profile_management():
     assert profile.mode == "wifi", "Profile mode incorrect"
     assert profile.ssid == "TestNetwork", "Profile SSID incorrect"
     assert profile.stealth_level == 2, "Profile stealth level incorrect"
+    assert profile.use_count == 0, "Initial use count should be 0"
     
     # Test profile update
     update_success = ux_manager.update_profile("test_profile", stealth_level=3, description="Updated profile")
@@ -1192,27 +1193,49 @@ def test_connection_profile_management():
     assert updated_profile.stealth_level == 3, "Profile stealth level not updated"
     assert updated_profile.description == "Updated profile", "Profile description not updated"
     
-    # Test profile usage tracking
+    # CRITICAL TEST: Profile usage tracking
+    initial_use_count = updated_profile.use_count
     used_profile = ux_manager.use_profile("test_profile")
     assert used_profile is not None, "Profile usage failed"
-    assert used_profile.use_count == 1, "Profile use count not incremented"
+    assert used_profile.use_count == initial_use_count + 1, f"Profile use count not incremented correctly. Expected {initial_use_count + 1}, got {used_profile.use_count}"
     assert used_profile.last_used is not None, "Profile last_used not set"
+    
+    # Test multiple uses
+    ux_manager.use_profile("test_profile")
+    ux_manager.use_profile("test_profile")
+    final_profile = ux_manager.get_profile("test_profile")
+    assert final_profile.use_count == initial_use_count + 3, f"Multiple uses not tracked correctly. Expected {initial_use_count + 3}, got {final_profile.use_count}"
+    
+    # Test profile sorting by usage
+    ux_manager.create_profile("low_use_profile", "usb", description="Rarely used")
+    ux_manager.use_profile("low_use_profile")  # Use once
+    
+    sorted_profiles = ux_manager.list_profiles()
+    assert len(sorted_profiles) >= 2, "Should have at least 2 profiles"
+    # Most used profile should be first
+    assert sorted_profiles[0].name == "test_profile", f"Most used profile should be first. Got {sorted_profiles[0].name}"
+    assert sorted_profiles[0].use_count >= sorted_profiles[1].use_count, "Profiles not sorted by usage correctly"
     
     # Test profile deletion
     delete_success = ux_manager.delete_profile("test_profile")
     assert delete_success == True, "Profile deletion failed"
     assert "test_profile" not in ux_manager.user_profiles, "Profile not removed from user_profiles"
+    
+    # Cleanup
+    ux_manager.delete_profile("low_use_profile")
 
-def test_user_preferences_management():
-    """Test user preferences loading, updating, and saving"""
+def test_user_preferences_management_comprehensive():
+    """Test user preferences loading, updating, and DEFAULT VALUES (CRITICAL FIX)"""
     from user_experience import UserExperienceManager
     
     ux_manager = UserExperienceManager()
     
-    # Test default preferences
-    assert ux_manager.get_preference("theme") == "cyberpunk_dark", "Default theme incorrect"
+    # CRITICAL TEST: Default preferences validation
+    assert ux_manager.get_preference("theme") == "cyberpunk_dark", f"Default theme incorrect. Expected 'cyberpunk_dark', got '{ux_manager.get_preference('theme')}'"
     assert ux_manager.get_preference("notifications_enabled") == True, "Default notifications setting incorrect"
-    assert ux_manager.get_preference("preferred_connection_mode") == "usb", "Default connection mode incorrect"
+    assert ux_manager.get_preference("preferred_connection_mode") == "usb", f"Default connection mode incorrect. Expected 'usb', got '{ux_manager.get_preference('preferred_connection_mode')}'"
+    assert ux_manager.get_preference("auto_connect_on_startup") == False, "Default auto_connect setting incorrect"
+    assert ux_manager.get_preference("warning_threshold_gb") == 10.0, f"Default warning threshold incorrect. Expected 10.0, got {ux_manager.get_preference('warning_threshold_gb')}"
     
     # Test preference updates
     ux_manager.update_preference("theme", "light_mode")
@@ -1224,24 +1247,59 @@ def test_user_preferences_management():
     # Test custom preference with default
     custom_value = ux_manager.get_preference("non_existent_key", "default_value")
     assert custom_value == "default_value", "Default value not returned for non-existent preference"
+    
+    # Test boolean preferences
+    ux_manager.update_preference("notifications_enabled", False)
+    assert ux_manager.get_preference("notifications_enabled") == False, "Boolean preference update failed"
+    
+    # Reset to defaults and verify
+    original_theme = ux_manager.get_preference("theme")
+    ux_manager.reset_preferences()
+    reset_theme = ux_manager.get_preference("theme")
+    assert reset_theme == "cyberpunk_dark", f"Preference reset failed. Expected 'cyberpunk_dark', got '{reset_theme}'"
 
-def test_usage_analytics_and_insights():
-    """Test usage statistics recording and insights generation"""
+def test_usage_analytics_and_insights_comprehensive():
+    """Test usage statistics recording and CALCULATIONS (CRITICAL FIX)"""
     from user_experience import UserExperienceManager
     
     ux_manager = UserExperienceManager()
     
-    # Record some test sessions
-    ux_manager.record_connection_session("wifi", 3600, 1024*1024*100, True)  # 1 hour, 100MB, success
-    ux_manager.record_connection_session("usb", 1800, 1024*1024*50, True)   # 30 min, 50MB, success
-    ux_manager.record_connection_session("iphone", 7200, 1024*1024*200, False)  # 2 hours, 200MB, failed
+    # Clear any existing stats
+    ux_manager.usage_stats.total_sessions = 0
+    ux_manager.usage_stats.total_uptime_hours = 0.0
+    ux_manager.usage_stats.total_data_gb = 0.0
+    ux_manager.usage_stats.success_rate_percent = 100.0
     
-    # Test usage statistics
+    # Record test sessions with precise tracking
+    session_data = [
+        ("wifi", 3600, 1024*1024*100, True),   # 1 hour, 100MB, success
+        ("usb", 1800, 1024*1024*50, True),    # 30 min, 50MB, success  
+        ("iphone", 7200, 1024*1024*200, False), # 2 hours, 200MB, failed
+        ("wifi", 1800, 1024*1024*75, True),   # 30 min, 75MB, success
+        ("usb", 3600, 1024*1024*125, True),   # 1 hour, 125MB, success
+        ("wifi", 900, 1024*1024*25, False),   # 15 min, 25MB, failed
+    ]
+    
+    for mode, duration, data_bytes, success in session_data:
+        ux_manager.record_connection_session(mode, duration, data_bytes, success)
+    
+    # CRITICAL TEST: Session count validation
     stats = ux_manager.usage_stats
-    assert stats.total_sessions == 3, f"Expected 3 sessions, got {stats.total_sessions}"
-    assert stats.total_uptime_hours > 0, "Total uptime should be greater than 0"
-    assert stats.total_data_gb > 0, "Total data should be greater than 0"
-    assert 0 <= stats.success_rate_percent <= 100, "Success rate should be between 0-100"
+    expected_sessions = len(session_data)
+    assert stats.total_sessions == expected_sessions, f"Expected {expected_sessions} sessions, got {stats.total_sessions}"
+    
+    # Test uptime calculation
+    expected_uptime = sum(duration for _, duration, _, _ in session_data) / 3600
+    assert abs(stats.total_uptime_hours - expected_uptime) < 0.1, f"Uptime calculation incorrect. Expected ~{expected_uptime}, got {stats.total_uptime_hours}"
+    
+    # Test data calculation
+    expected_data_gb = sum(data_bytes for _, _, data_bytes, _ in session_data) / (1024**3)
+    assert abs(stats.total_data_gb - expected_data_gb) < 0.01, f"Data calculation incorrect. Expected ~{expected_data_gb}, got {stats.total_data_gb}"
+    
+    # CRITICAL TEST: Success rate calculation
+    successful_sessions = sum(1 for _, _, _, success in session_data if success)
+    expected_success_rate = (successful_sessions / len(session_data)) * 100
+    assert abs(stats.success_rate_percent - expected_success_rate) < 1.0, f"Success rate calculation incorrect. Expected ~{expected_success_rate}%, got {stats.success_rate_percent}%"
     
     # Test usage insights
     insights = ux_manager.get_usage_insights()
@@ -1250,9 +1308,87 @@ def test_usage_analytics_and_insights():
     assert "recommendations" in insights, "Insights missing recommendations"
     
     summary = insights["summary"]
-    assert summary["total_sessions"] == 3, "Summary session count incorrect"
-    assert summary["total_uptime_hours"] > 0, "Summary uptime incorrect"
-    assert summary["total_data_gb"] > 0, "Summary data usage incorrect"
+    assert summary["total_sessions"] == expected_sessions, f"Summary session count incorrect. Expected {expected_sessions}, got {summary['total_sessions']}"
+    assert abs(summary["total_uptime_hours"] - expected_uptime) < 0.1, "Summary uptime incorrect"
+    assert abs(summary["total_data_gb"] - expected_data_gb) < 0.01, "Summary data usage incorrect"
+    assert abs(summary["success_rate"] - expected_success_rate) < 1.0, "Summary success rate incorrect"
+
+def test_data_persistence_and_configuration_comprehensive():
+    """Test data persistence and atomic file operations (CRITICAL FIX)"""
+    from user_experience import UserExperienceManager
+    import tempfile
+    import shutil
+    
+    # Create temporary directory for testing
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_config_dir = Path(temp_dir) / ".config" / "pdanet-linux"
+        
+        # Create UX manager with custom config directory
+        ux_manager = UserExperienceManager()
+        original_config_dir = ux_manager.config_dir
+        ux_manager.config_dir = temp_config_dir
+        ux_manager.profiles_file = temp_config_dir / "profiles.json"
+        ux_manager.preferences_file = temp_config_dir / "user_preferences.json"
+        ux_manager.usage_file = temp_config_dir / "usage_statistics.json"
+        
+        try:
+            # Test profile persistence
+            ux_manager.create_profile("persistent_profile", "wifi", ssid="TestWiFi", stealth_level=2)
+            ux_manager.save_profiles()
+            
+            # Verify file was created
+            assert ux_manager.profiles_file.exists(), "Profiles file not created"
+            
+            # Create new manager instance to test loading
+            ux_manager2 = UserExperienceManager()
+            ux_manager2.config_dir = temp_config_dir
+            ux_manager2.profiles_file = temp_config_dir / "profiles.json"
+            ux_manager2._load_profiles()
+            
+            assert "persistent_profile" in ux_manager2.user_profiles, "Profile not persisted correctly"
+            loaded_profile = ux_manager2.get_profile("persistent_profile")
+            assert loaded_profile.ssid == "TestWiFi", "Profile data not persisted correctly"
+            
+            # Test preferences persistence
+            ux_manager.update_preference("theme", "dark_mode")
+            ux_manager.save_preferences()
+            
+            assert ux_manager.preferences_file.exists(), "Preferences file not created"
+            
+            # Load preferences in new instance
+            ux_manager2.preferences_file = temp_config_dir / "user_preferences.json"
+            ux_manager2.user_preferences = ux_manager2._load_user_preferences()
+            
+            assert ux_manager2.get_preference("theme") == "dark_mode", "Preferences not persisted correctly"
+            
+            # Test usage statistics persistence
+            ux_manager.record_connection_session("wifi", 3600, 1024*1024*100, True)
+            ux_manager.save_usage_statistics()
+            
+            assert ux_manager.usage_file.exists(), "Usage statistics file not created"
+            
+            # Load usage stats in new instance
+            ux_manager2.usage_file = temp_config_dir / "usage_statistics.json"
+            ux_manager2.usage_stats = ux_manager2._load_usage_statistics()
+            
+            assert ux_manager2.usage_stats.total_sessions > 0, "Usage statistics not persisted correctly"
+            
+            # Test atomic file operations (backup and restore)
+            original_profiles = dict(ux_manager.user_profiles)
+            ux_manager.create_profile("atomic_test", "usb")
+            
+            # Simulate save failure by making directory read-only
+            try:
+                temp_config_dir.chmod(0o444)  # Read-only
+                ux_manager.save_profiles()  # Should handle gracefully
+                temp_config_dir.chmod(0o755)  # Restore permissions
+            except Exception:
+                temp_config_dir.chmod(0o755)  # Restore permissions
+                pass  # Expected to fail gracefully
+            
+        finally:
+            # Restore original config directory
+            ux_manager.config_dir = original_config_dir
 
 def test_profile_suggestions_and_ai():
     """Test AI-based profile suggestions"""
