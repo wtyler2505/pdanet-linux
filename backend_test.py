@@ -1150,8 +1150,8 @@ else:
     print("❌ SOME P1 + P2 FUNCTIONALITY TESTS FAILED")
     print("🔍 Review failed tests above for P1/P2 functionality issues")
 
-# Test Suite 11: P3 User Experience Manager Tests
-print("\n[11/14] P3 USER EXPERIENCE MANAGER TESTS")
+# Test Suite 11: P3 User Experience Manager Tests - FOCUSED ON FAILING TASKS
+print("\n[11/16] P3 USER EXPERIENCE MANAGER TESTS - CRITICAL FIXES")
 print("-" * 80)
 
 def test_user_experience_manager_initialization():
