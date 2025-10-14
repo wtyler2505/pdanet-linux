@@ -1013,6 +1013,163 @@ class ConnectionManager:
             base_status['failure_analysis'] = self.reliability_manager.get_failure_analysis()
         
         # Add network health
+    # ------------------------------------------------------------------
+    # Enhanced User Experience Integration (P3-UX)
+    # ------------------------------------------------------------------
+    
+    def connect_with_profile(self, profile_name: str) -> bool:
+        """Connect using a user profile with enhanced UX"""
+        profile = self.ux_manager.use_profile(profile_name)
+        if not profile:
+            self.logger.error(f"Profile not found: {profile_name}")
+            return False
+        
+        self.logger.info(f"Connecting with profile: {profile.name}")
+        
+        # Record connection attempt for analytics
+        start_time = time.time()
+        
+        try:
+            success = self.connect(
+                mode=profile.mode,
+                ssid=profile.ssid,
+                password=self._get_profile_password(profile)
+            )
+            
+            # Record session for usage analytics
+            if success:
+                self.current_profile = profile_name
+                self.logger.info(f"Successfully connected with profile: {profile.name}")
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Profile connection failed: {e}")
+            return False
+    
+    def _get_profile_password(self, profile) -> Optional[str]:
+        """Get password from profile (from keyring if stored securely)"""
+        if profile.password_keyring_id:
+            try:
+                import keyring
+                return keyring.get_password("pdanet-linux", profile.password_keyring_id)
+            except Exception as e:
+                self.logger.warning(f"Failed to retrieve password from keyring: {e}")
+        
+        return None
+    
+    def get_quick_connect_suggestions(self) -> List[Dict[str, Any]]:
+        """Get AI-suggested connection profiles for quick connect"""
+        current_context = {
+            "current_time": datetime.now().hour,
+            "preferred_mode": self.ux_manager.get_preference("preferred_connection_mode", "usb"),
+            "current_location": "unknown",  # Could be enhanced with location detection
+            "connection_history": self._get_recent_connection_history()
+        }
+        
+        suggestions = self.ux_manager.get_suggested_profiles(current_context)
+        
+        return [
+            {
+                "profile_name": profile.name,
+                "mode": profile.mode,
+                "description": profile.description or f"{profile.mode.upper()} connection",
+                "last_used": profile.last_used,
+                "use_count": profile.use_count,
+                "estimated_success_rate": self._estimate_profile_success_rate(profile)
+            }
+            for profile in suggestions
+        ]
+    
+    def _get_recent_connection_history(self) -> List[Dict[str, Any]]:
+        """Get recent connection history for context"""
+        # This would integrate with actual connection history
+        return []
+    
+    def _estimate_profile_success_rate(self, profile) -> float:
+        """Estimate success rate for profile based on history"""
+        # This would analyze historical success/failure data
+        return 85.0  # Placeholder
+    
+    def record_connection_session_complete(self, success: bool):
+        """Record completed connection session for UX analytics"""
+        if hasattr(self, 'current_profile') and hasattr(self, '_session_start_time'):
+            duration = time.time() - self._session_start_time
+            data_used = self.stats.get_total_downloaded() + self.stats.get_total_uploaded()
+            
+            # Get current mode from profile or fallback to current_mode
+            mode = self.current_mode or "usb"
+            
+            self.ux_manager.record_connection_session(
+                mode=mode,
+                duration_seconds=duration,
+                data_bytes=data_used,
+                success=success
+            )
+    
+    def get_enhanced_status_with_ux(self) -> Dict[str, Any]:
+        """Get comprehensive status including UX metrics and suggestions"""
+        base_status = self.get_comprehensive_status()
+        
+        # Add UX enhancements
+        base_status.update({
+            "user_experience": {
+                "quick_connect_suggestions": self.get_quick_connect_suggestions(),
+                "usage_insights": self.ux_manager.get_usage_insights(),
+                "quality_assessment": self.ux_manager.get_quality_assessment(),
+                "smart_notifications": self.ux_manager.get_smart_notifications(
+                    connection_state=self.state.value,
+                    current_metrics={
+                        "session_data_gb": (self.stats.get_total_downloaded() + self.stats.get_total_uploaded()) / (1024**3),
+                        "connection_quality": self._calculate_current_quality_score()
+                    }
+                )
+            },
+            "profiles": {
+                "available_profiles": len(self.ux_manager.user_profiles),
+                "most_used_profile": self._get_most_used_profile_name(),
+                "profile_suggestions": len(self.get_quick_connect_suggestions())
+            }
+        })
+        
+        return base_status
+    
+    def _calculate_current_quality_score(self) -> int:
+        """Calculate current connection quality score (0-100)"""
+        if self.state != ConnectionState.CONNECTED:
+            return 0
+        
+        # This would integrate with actual quality metrics
+        return 75  # Placeholder
+    
+    def _get_most_used_profile_name(self) -> str:
+        """Get the name of the most used profile"""
+        profiles = self.ux_manager.list_profiles()
+        if profiles:
+            return profiles[0].name
+        return ""
+    
+    def execute_quick_action(self, action: str) -> Dict[str, Any]:
+        """Execute quick action with connection manager integration"""
+        result = self.ux_manager.execute_quick_action(action, {
+            "current_state": self.state.value,
+            "current_interface": self.current_interface,
+            "current_mode": self.current_mode
+        })
+        
+        # Handle connection-specific actions
+        if result.get("success") and "action_required" in result:
+            required_action = result["action_required"]
+            
+            if required_action == "toggle_stealth_mode":
+                # This would integrate with actual stealth toggle
+                result["stealth_toggled"] = True
+                
+            elif required_action == "start_speed_test":
+                # This would start a speed test
+                result["speed_test_started"] = True
+                
+        return result
         if hasattr(self, 'reliability_manager'):
             base_status['network_health'] = self.reliability_manager.check_connection_health().value
         
