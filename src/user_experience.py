@@ -180,17 +180,37 @@ class UserExperienceManager:
     def save_profiles(self):
         """Save user connection profiles atomically"""
         try:
+            # Ensure directory exists
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            
             data = {name: asdict(profile) for name, profile in self.user_profiles.items()}
             
-            # Atomic write
+            # Atomic write with backup
             temp_file = self.profiles_file.with_suffix('.tmp')
             with open(temp_file, 'w') as f:
                 json.dump(data, f, indent=2)
-            temp_file.replace(self.profiles_file)
+            
+            # Atomic move
+            if self.profiles_file.exists():
+                backup_file = self.profiles_file.with_suffix('.bak')
+                self.profiles_file.rename(backup_file)
+            
+            temp_file.rename(self.profiles_file)
+            
+            # Remove backup if successful
+            backup_file = self.profiles_file.with_suffix('.bak')
+            if backup_file.exists():
+                backup_file.unlink()
             
             self.logger.debug(f"Saved {len(self.user_profiles)} profiles")
         except Exception as e:
             self.logger.error(f"Failed to save profiles: {e}")
+            
+            # Restore from backup if available
+            backup_file = self.profiles_file.with_suffix('.bak')
+            if backup_file.exists():
+                backup_file.rename(self.profiles_file)
+                self.logger.info("Restored profiles from backup")
     
     def save_preferences(self):
         """Save user preferences atomically"""
