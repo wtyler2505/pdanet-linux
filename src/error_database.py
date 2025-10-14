@@ -404,6 +404,202 @@ ERROR_DATABASE = {
             )
         ]
     ),
+
+    # Connection Manager Error Codes - P2 Error Recovery Integration
+    "input_validation_failed": ErrorInfo(
+        code="input_validation_failed",
+        title="Input Validation Failed",
+        description="Invalid parameters provided for connection",
+        category="config",
+        severity="medium",
+        solutions=[
+            ErrorSolution(
+                title="Check Connection Parameters",
+                steps=[
+                    "Verify SSID contains only valid characters (no special symbols)",
+                    "Password should be 8-63 characters for WPA/WPA2",
+                    "SSID should be 1-32 characters long",
+                    "Remove any leading/trailing spaces"
+                ]
+            ),
+            ErrorSolution(
+                title="Reset to Defaults",
+                steps=[
+                    "Clear all connection fields",
+                    "Re-enter SSID and password carefully", 
+                    "Use copy-paste to avoid typing errors",
+                    "Try connecting without password first (for open networks)"
+                ]
+            )
+        ]
+    ),
+    
+    "missing_ssid": ErrorInfo(
+        code="missing_ssid",
+        title="Missing SSID",
+        description="Network name (SSID) is required for WiFi/iPhone connections",
+        category="config",
+        severity="medium",
+        solutions=[
+            ErrorSolution(
+                title="Provide Network Name",
+                steps=[
+                    "Enter the WiFi hotspot name in SSID field",
+                    "For iPhone: typically 'iPhone' or 'YourName's iPhone'",
+                    "For Android: typically 'AndroidHotspot' or custom name",
+                    "Check device hotspot settings for exact name"
+                ]
+            ),
+            ErrorSolution(
+                title="Scan for Networks",
+                steps=[
+                    "Use 'Scan Networks' button to discover available hotspots",
+                    "Select your device from the list",
+                    "Network name will be filled automatically",
+                    "Proceed with password if required"
+                ]
+            )
+        ]
+    ),
+    
+    "script_not_found": ErrorInfo(
+        code="script_not_found", 
+        title="Connection Script Missing",
+        description="Required connection script not found in system",
+        category="system",
+        severity="critical",
+        solutions=[
+            ErrorSolution(
+                title="Reinstall PdaNet Linux",
+                steps=[
+                    "Run: ./install.sh to reinstall scripts",
+                    "Check installation log for errors",
+                    "Ensure all scripts have execute permission",
+                    "Verify /usr/local/bin/pdanet directory exists"
+                ],
+                auto_fix_command="chmod +x /usr/local/bin/pdanet/*.sh",
+                requires_root=True
+            ),
+            ErrorSolution(
+                title="Manual Script Installation",
+                steps=[
+                    "Navigate to PdaNet source directory",
+                    "Run: sudo cp scripts/*.sh /usr/local/bin/pdanet/",
+                    "Run: sudo chmod +x /usr/local/bin/pdanet/*.sh",
+                    "Try connection again"
+                ],
+                requires_root=True
+            )
+        ]
+    ),
+    
+    "connection_failed": ErrorInfo(
+        code="connection_failed",
+        title="Connection Establishment Failed", 
+        description="Unable to establish tethering connection",
+        category="network",
+        severity="high",
+        solutions=[
+            ErrorSolution(
+                title="Check Device Tethering",
+                steps=[
+                    "Ensure USB/WiFi tethering is enabled on device",
+                    "For USB: Check cable connection",
+                    "For WiFi: Verify hotspot is active and password correct",
+                    "Restart tethering on device and try again"
+                ]
+            ),
+            ErrorSolution(
+                title="Restart Network Services",
+                steps=[
+                    "Run: sudo systemctl restart NetworkManager",
+                    "Wait 10 seconds for network stack to stabilize",
+                    "Try connection again",
+                    "Check system logs if problem persists"
+                ],
+                auto_fix_command="systemctl restart NetworkManager",
+                requires_root=True
+            ),
+            ErrorSolution(
+                title="Check Firewall Settings",
+                steps=[
+                    "Firewall may block tethering connections",
+                    "Run: sudo ufw status to check firewall",
+                    "Temporarily disable: sudo ufw disable",
+                    "Try connection, then re-enable firewall if needed"
+                ]
+            )
+        ]
+    ),
+    
+    "iphone_script_not_found": ErrorInfo(
+        code="iphone_script_not_found",
+        title="iPhone Connection Script Missing",
+        description="iPhone-specific connection script not found",
+        category="system", 
+        severity="critical",
+        solutions=[
+            ErrorSolution(
+                title="Reinstall iPhone Support",
+                steps=[
+                    "Run full reinstallation: ./install.sh",
+                    "Ensure iPhone bypass scripts are installed",
+                    "Check /usr/local/bin/pdanet/iphone/ directory",
+                    "Verify script permissions are correct"
+                ],
+                auto_fix_command="chmod +x /usr/local/bin/pdanet/iphone/*.sh",
+                requires_root=True
+            )
+        ]
+    ),
+
+    "disconnect_script_not_found": ErrorInfo(
+        code="disconnect_script_not_found",
+        title="Disconnect Script Missing",
+        description="Script required for disconnection not found",
+        category="system",
+        severity="high",
+        solutions=[
+            ErrorSolution(
+                title="Force Kill Connection",
+                steps=[
+                    "Emergency disconnect: sudo pkill -f pdanet",
+                    "Reset network: sudo systemctl restart NetworkManager", 
+                    "Manually disconnect tethering on device",
+                    "Reinstall PdaNet to fix missing scripts"
+                ],
+                requires_root=True
+            )
+        ]
+    ),
+
+    "connection_thread_exception": ErrorInfo(
+        code="connection_thread_exception",
+        title="Connection Thread Error",
+        description="Unexpected error during connection process",
+        category="system",
+        severity="high",
+        solutions=[
+            ErrorSolution(
+                title="Check System Resources",
+                steps=[
+                    "Ensure system has sufficient memory",
+                    "Close other network applications", 
+                    "Check disk space is available",
+                    "Restart PdaNet application"
+                ]
+            ),
+            ErrorSolution(
+                title="Check Logs for Details",
+                steps=[
+                    "Open Menu → View Logs",
+                    "Look for specific error details",
+                    "Note any permission or system errors",
+                    "Report issue with log details if problem persists"
+                ]
+            )
+        ]
+    )
 }
 
 
