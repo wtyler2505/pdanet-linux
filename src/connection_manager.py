@@ -1218,6 +1218,10 @@ class ConnectionManager:
                 
             elif required_action == "start_speed_test":
                 # This would start a speed test
+                result["speed_test_started"] = True
+                
+        return result
+
     # ------------------------------------------------------------------
     # Advanced Features Integration (P4-ADV)
     # ------------------------------------------------------------------
