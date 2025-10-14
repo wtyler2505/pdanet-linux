@@ -726,11 +726,11 @@ class ConnectionManager:
                     self.current_failures = 0  # Reset failure counter on success
                     self.logger.ok(f"{mode.upper()} connection established successfully")
                 else:
-                    error_msg = f"{mode.upper()} connection failed"
-                    self.last_error = error_msg
-                    self._set_state(ConnectionState.ERROR)
-                    self._notify_error(error_msg)
-                    self.reliability_manager.report_failure("connection_script_failed", error_msg, self.current_interface)
+                    self._handle_error_with_code(
+                        "connection_failed",
+                        f"{mode.upper()} connection failed",
+                        {"mode": mode, "script": script, "interface": self.current_interface}
+                    )
 
             except Exception as e:
                 error_msg = f"Connection thread error: {e}"
