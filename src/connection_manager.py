@@ -709,11 +709,11 @@ class ConnectionManager:
                     script = self.connect_script
 
                 if not script:
-                    error_msg = f"Connection script not found for {mode} mode"
-                    self.last_error = error_msg
-                    self._set_state(ConnectionState.ERROR)
-                    self._notify_error(error_msg)
-                    self.reliability_manager.report_failure("script_not_found", error_msg)
+                    self._handle_error_with_code(
+                        "script_not_found", 
+                        f"Connection script not found for {mode} mode",
+                        {"mode": mode, "expected_script": f"{mode}_connect_script"}
+                    )
                     return
 
                 self.logger.info(f"Running connection script: {script}")
