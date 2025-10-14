@@ -79,14 +79,15 @@ def test_error_recovery_dialog_fix():
             "details="
         ]
         
-        # Find ErrorRecoveryDialog constructor calls
-        dialog_section = re.search(r'ErrorRecoveryDialog\((.*?)\)', gui_content, re.DOTALL)
+        # Find ErrorRecoveryDialog constructor calls - look for the full multiline call
+        dialog_pattern = r'ErrorRecoveryDialog\s*\(\s*parent=self,.*?\)'
+        dialog_match = re.search(dialog_pattern, gui_content, re.DOTALL)
         
-        if not dialog_section:
+        if not dialog_match:
             print("  ✗ No ErrorRecoveryDialog constructor calls found")
             return False
         
-        call_content = dialog_section.group(1)
+        call_content = dialog_match.group(0)
         
         all_correct = True
         for required_param in correct_params:
