@@ -614,8 +614,8 @@ class PdaNetGUI(Gtk.Window):
         try:
             # Create and configure the dashboard
             self.data_dashboard = DataUsageDashboard(
-                stats_collector=self.stats,
-                connection_manager=self.connection
+                config_manager=self.config,
+                stats_collector=self.stats
             )
             
             # Wrap in a container to handle any sizing issues
