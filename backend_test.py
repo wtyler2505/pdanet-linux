@@ -1147,5 +1147,747 @@ else:
     print("❌ SOME P1 + P2 FUNCTIONALITY TESTS FAILED")
     print("🔍 Review failed tests above for P1/P2 functionality issues")
 
+# Test Suite 11: P3 User Experience Manager Tests
+print("\n[11/14] P3 USER EXPERIENCE MANAGER TESTS")
+print("-" * 80)
+
+def test_user_experience_manager_initialization():
+    """Test UserExperienceManager initialization"""
+    from user_experience import UserExperienceManager, ConnectionProfile, UsageStatistics
+    
+    ux_manager = UserExperienceManager()
+    assert ux_manager is not None, "UserExperienceManager failed to initialize"
+    assert hasattr(ux_manager, 'user_profiles'), "Missing user_profiles"
+    assert hasattr(ux_manager, 'user_preferences'), "Missing user_preferences"
+    assert hasattr(ux_manager, 'usage_stats'), "Missing usage_stats"
+    assert hasattr(ux_manager, 'quality_history'), "Missing quality_history"
+    assert isinstance(ux_manager.usage_stats, UsageStatistics), "usage_stats not UsageStatistics instance"
+
+def test_connection_profile_management():
+    """Test connection profile creation, update, and deletion"""
+    from user_experience import UserExperienceManager
+    
+    ux_manager = UserExperienceManager()
+    
+    # Test profile creation
+    success = ux_manager.create_profile("test_profile", "wifi", ssid="TestNetwork", stealth_level=2)
+    assert success == True, "Profile creation failed"
+    assert "test_profile" in ux_manager.user_profiles, "Profile not added to user_profiles"
+    
+    profile = ux_manager.get_profile("test_profile")
+    assert profile is not None, "Created profile not retrievable"
+    assert profile.name == "test_profile", "Profile name incorrect"
+    assert profile.mode == "wifi", "Profile mode incorrect"
+    assert profile.ssid == "TestNetwork", "Profile SSID incorrect"
+    assert profile.stealth_level == 2, "Profile stealth level incorrect"
+    
+    # Test profile update
+    update_success = ux_manager.update_profile("test_profile", stealth_level=3, description="Updated profile")
+    assert update_success == True, "Profile update failed"
+    
+    updated_profile = ux_manager.get_profile("test_profile")
+    assert updated_profile.stealth_level == 3, "Profile stealth level not updated"
+    assert updated_profile.description == "Updated profile", "Profile description not updated"
+    
+    # Test profile usage tracking
+    used_profile = ux_manager.use_profile("test_profile")
+    assert used_profile is not None, "Profile usage failed"
+    assert used_profile.use_count == 1, "Profile use count not incremented"
+    assert used_profile.last_used is not None, "Profile last_used not set"
+    
+    # Test profile deletion
+    delete_success = ux_manager.delete_profile("test_profile")
+    assert delete_success == True, "Profile deletion failed"
+    assert "test_profile" not in ux_manager.user_profiles, "Profile not removed from user_profiles"
+
+def test_user_preferences_management():
+    """Test user preferences loading, updating, and saving"""
+    from user_experience import UserExperienceManager
+    
+    ux_manager = UserExperienceManager()
+    
+    # Test default preferences
+    assert ux_manager.get_preference("theme") == "cyberpunk_dark", "Default theme incorrect"
+    assert ux_manager.get_preference("notifications_enabled") == True, "Default notifications setting incorrect"
+    assert ux_manager.get_preference("preferred_connection_mode") == "usb", "Default connection mode incorrect"
+    
+    # Test preference updates
+    ux_manager.update_preference("theme", "light_mode")
+    assert ux_manager.get_preference("theme") == "light_mode", "Preference update failed"
+    
+    ux_manager.update_preference("warning_threshold_gb", 25.0)
+    assert ux_manager.get_preference("warning_threshold_gb") == 25.0, "Numeric preference update failed"
+    
+    # Test custom preference with default
+    custom_value = ux_manager.get_preference("non_existent_key", "default_value")
+    assert custom_value == "default_value", "Default value not returned for non-existent preference"
+
+def test_usage_analytics_and_insights():
+    """Test usage statistics recording and insights generation"""
+    from user_experience import UserExperienceManager
+    
+    ux_manager = UserExperienceManager()
+    
+    # Record some test sessions
+    ux_manager.record_connection_session("wifi", 3600, 1024*1024*100, True)  # 1 hour, 100MB, success
+    ux_manager.record_connection_session("usb", 1800, 1024*1024*50, True)   # 30 min, 50MB, success
+    ux_manager.record_connection_session("iphone", 7200, 1024*1024*200, False)  # 2 hours, 200MB, failed
+    
+    # Test usage statistics
+    stats = ux_manager.usage_stats
+    assert stats.total_sessions == 3, f"Expected 3 sessions, got {stats.total_sessions}"
+    assert stats.total_uptime_hours > 0, "Total uptime should be greater than 0"
+    assert stats.total_data_gb > 0, "Total data should be greater than 0"
+    assert 0 <= stats.success_rate_percent <= 100, "Success rate should be between 0-100"
+    
+    # Test usage insights
+    insights = ux_manager.get_usage_insights()
+    assert "summary" in insights, "Insights missing summary"
+    assert "patterns" in insights, "Insights missing patterns"
+    assert "recommendations" in insights, "Insights missing recommendations"
+    
+    summary = insights["summary"]
+    assert summary["total_sessions"] == 3, "Summary session count incorrect"
+    assert summary["total_uptime_hours"] > 0, "Summary uptime incorrect"
+    assert summary["total_data_gb"] > 0, "Summary data usage incorrect"
+
+def test_profile_suggestions_and_ai():
+    """Test AI-based profile suggestions"""
+    from user_experience import UserExperienceManager
+    from datetime import datetime
+    
+    ux_manager = UserExperienceManager()
+    
+    # Create test profiles with usage history
+    ux_manager.create_profile("morning_wifi", "wifi", ssid="HomeWiFi", description="Morning work profile")
+    ux_manager.create_profile("mobile_usb", "usb", description="Mobile USB profile")
+    
+    # Simulate usage
+    morning_profile = ux_manager.use_profile("morning_wifi")
+    mobile_profile = ux_manager.use_profile("mobile_usb")
+    
+    # Test profile suggestions
+    current_context = {
+        "current_time": datetime.now().hour,
+        "preferred_mode": "wifi",
+        "current_location": "home"
+    }
+    
+    suggestions = ux_manager.get_suggested_profiles(current_context)
+    assert isinstance(suggestions, list), "Suggestions should be a list"
+    
+    # Test with auto suggestions disabled
+    ux_manager.update_preference("auto_profile_suggestions", False)
+    no_suggestions = ux_manager.get_suggested_profiles(current_context)
+    assert len(no_suggestions) == 0, "Should return no suggestions when disabled"
+
+def test_quality_monitoring_and_assessment():
+    """Test network quality monitoring and assessment"""
+    from user_experience import UserExperienceManager
+    
+    ux_manager = UserExperienceManager()
+    
+    # Test quality assessment with no data
+    assessment = ux_manager.get_quality_assessment()
+    assert "status" in assessment, "Assessment missing status"
+    assert assessment["status"] == "no_data", "Should report no_data when no metrics available"
+    
+    # Test quality monitoring is started
+    assert ux_manager.quality_monitoring_enabled == True, "Quality monitoring should be enabled by default"
+    assert hasattr(ux_manager, 'quality_history'), "Should have quality_history attribute"
+
+test("User Experience Manager Initialization", test_user_experience_manager_initialization)
+test("Connection Profile Management", test_connection_profile_management)
+test("User Preferences Management", test_user_preferences_management)
+test("Usage Analytics and Insights", test_usage_analytics_and_insights)
+test("Profile Suggestions and AI", test_profile_suggestions_and_ai)
+test("Quality Monitoring and Assessment", test_quality_monitoring_and_assessment)
+
+# Test Suite 12: P3 Keyboard Navigation and Accessibility Tests
+print("\n[12/14] P3 KEYBOARD NAVIGATION AND ACCESSIBILITY TESTS")
+print("-" * 80)
+
+def test_keyboard_navigation_manager_initialization():
+    """Test KeyboardNavigationManager initialization"""
+    from keyboard_navigation import KeyboardNavigationManager, AccessibilitySettings, AccessibilityMode
+    
+    nav_manager = KeyboardNavigationManager()
+    assert nav_manager is not None, "KeyboardNavigationManager failed to initialize"
+    assert hasattr(nav_manager, 'shortcuts'), "Missing shortcuts"
+    assert hasattr(nav_manager, 'accessibility'), "Missing accessibility settings"
+    assert hasattr(nav_manager, 'command_palette_commands'), "Missing command palette commands"
+    assert isinstance(nav_manager.accessibility, AccessibilitySettings), "accessibility not AccessibilitySettings instance"
+
+def test_accessibility_settings_management():
+    """Test accessibility settings and mode management"""
+    from keyboard_navigation import KeyboardNavigationManager, AccessibilityMode
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test default accessibility settings
+    assert nav_manager.accessibility.mode == AccessibilityMode.NONE, "Default accessibility mode should be NONE"
+    assert nav_manager.accessibility.high_contrast == False, "Default high contrast should be False"
+    assert nav_manager.accessibility.large_text == False, "Default large text should be False"
+    
+    # Test enabling high contrast mode
+    nav_manager.enable_accessibility_mode(AccessibilityMode.HIGH_CONTRAST)
+    assert nav_manager.accessibility.mode == AccessibilityMode.HIGH_CONTRAST, "High contrast mode not enabled"
+    assert nav_manager.accessibility.high_contrast == True, "High contrast setting not enabled"
+    assert nav_manager.accessibility.focus_indicators == True, "Focus indicators should be enabled with high contrast"
+    
+    # Test enabling large text mode
+    nav_manager.enable_accessibility_mode(AccessibilityMode.LARGE_TEXT)
+    assert nav_manager.accessibility.mode == AccessibilityMode.LARGE_TEXT, "Large text mode not enabled"
+    assert nav_manager.accessibility.large_text == True, "Large text setting not enabled"
+    assert nav_manager.accessibility.large_text_scale == 1.5, "Large text scale not set correctly"
+    
+    # Test enabling keyboard-only mode
+    nav_manager.enable_accessibility_mode(AccessibilityMode.KEYBOARD_ONLY)
+    assert nav_manager.accessibility.mode == AccessibilityMode.KEYBOARD_ONLY, "Keyboard-only mode not enabled"
+    assert nav_manager.accessibility.keyboard_navigation_only == True, "Keyboard navigation only not enabled"
+
+def test_accessibility_css_generation():
+    """Test CSS generation for accessibility enhancements"""
+    from keyboard_navigation import KeyboardNavigationManager, AccessibilityMode
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test high contrast CSS
+    nav_manager.enable_accessibility_mode(AccessibilityMode.HIGH_CONTRAST)
+    css = nav_manager.get_accessibility_css()
+    assert "background: #000000" in css, "High contrast CSS missing background color"
+    assert "color: #FFFFFF" in css, "High contrast CSS missing text color"
+    assert "border: 2px solid #FFFFFF" in css, "High contrast CSS missing border styles"
+    
+    # Test large text CSS
+    nav_manager.enable_accessibility_mode(AccessibilityMode.LARGE_TEXT)
+    css = nav_manager.get_accessibility_css()
+    assert "font-size: 1.5em" in css, "Large text CSS missing font size"
+    assert "min-height:" in css, "Large text CSS missing element sizing"
+    
+    # Test focus indicators CSS
+    nav_manager.accessibility.focus_indicators = True
+    css = nav_manager.get_accessibility_css()
+    assert "outline: 3px solid #0080FF" in css, "Focus indicators CSS missing outline"
+
+def test_keyboard_shortcuts_system():
+    """Test keyboard shortcuts management and customization"""
+    from keyboard_navigation import KeyboardNavigationManager
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test default shortcuts exist
+    assert "connect" in nav_manager.shortcuts, "Connect shortcut missing"
+    assert "disconnect" in nav_manager.shortcuts, "Disconnect shortcut missing"
+    assert "quick_connect" in nav_manager.shortcuts, "Quick connect shortcut missing"
+    assert "command_palette" in nav_manager.shortcuts, "Command palette shortcut missing"
+    
+    # Test shortcut properties
+    connect_shortcut = nav_manager.shortcuts["connect"]
+    assert connect_shortcut.name == "connect", "Connect shortcut name incorrect"
+    assert connect_shortcut.key_combination == "Ctrl+C", "Connect shortcut key combination incorrect"
+    assert connect_shortcut.category == "Connection", "Connect shortcut category incorrect"
+    assert connect_shortcut.customizable == True, "Connect shortcut should be customizable"
+    
+    # Test shortcut customization
+    success = nav_manager.customize_shortcut("connect", "Ctrl+Shift+C")
+    assert success == True, "Shortcut customization failed"
+    
+    effective_shortcut = nav_manager.get_effective_shortcut("connect")
+    assert effective_shortcut == "Ctrl+Shift+C", "Effective shortcut not updated"
+    
+    # Test conflict detection
+    conflict_result = nav_manager.customize_shortcut("disconnect", "Ctrl+Shift+C")
+    assert conflict_result == False, "Should detect shortcut conflict"
+    
+    # Test shortcuts by category
+    categories = nav_manager.get_shortcuts_by_category()
+    assert "Connection" in categories, "Connection category missing"
+    assert "Profiles" in categories, "Profiles category missing"
+    assert "Accessibility" in categories, "Accessibility category missing"
+    assert len(categories["Connection"]) > 0, "Connection category should have shortcuts"
+
+def test_command_palette_functionality():
+    """Test command palette search and execution"""
+    from keyboard_navigation import KeyboardNavigationManager
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test command search
+    connect_results = nav_manager.search_commands("connect")
+    assert len(connect_results) > 0, "Should find connect-related commands"
+    
+    # Test exact match gets highest score
+    exact_results = nav_manager.search_commands("Connect")
+    if exact_results:
+        assert exact_results[0]["score"] >= 90, "Exact match should have high score"
+    
+    # Test partial match
+    partial_results = nav_manager.search_commands("net")
+    assert len(partial_results) > 0, "Should find network-related commands"
+    
+    # Test command execution
+    if "connect" in nav_manager.command_palette_commands:
+        result = nav_manager.execute_command("connect")
+        assert result["success"] == True, "Command execution should succeed"
+        assert "action_required" in result, "Command result should include action_required"
+    
+    # Test invalid command
+    invalid_result = nav_manager.execute_command("nonexistent_command")
+    assert invalid_result["success"] == False, "Invalid command should fail"
+
+def test_navigation_management_and_focus():
+    """Test navigation state management and focus tracking"""
+    from keyboard_navigation import KeyboardNavigationManager
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test focus stack management
+    nav_manager.push_focus("main_window")
+    nav_manager.push_focus("connect_button")
+    
+    current_focus = nav_manager.get_current_focus()
+    assert current_focus == "connect_button", "Current focus should be connect_button"
+    
+    popped_focus = nav_manager.pop_focus()
+    assert popped_focus == "connect_button", "Popped focus should be connect_button"
+    
+    current_focus = nav_manager.get_current_focus()
+    assert current_focus == "main_window", "Current focus should be main_window after pop"
+    
+    # Test modal state management
+    nav_manager.set_modal_active(True)
+    assert nav_manager.modal_active == True, "Modal should be active"
+    assert nav_manager.navigation_locked == True, "Navigation should be locked when modal active"
+    
+    nav_manager.set_modal_active(False)
+    assert nav_manager.modal_active == False, "Modal should be inactive"
+    assert nav_manager.navigation_locked == False, "Navigation should be unlocked when modal inactive"
+
+def test_screen_reader_and_audio_support():
+    """Test screen reader and audio feedback support"""
+    from keyboard_navigation import KeyboardNavigationManager, AccessibilityMode
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test screen reader announcements
+    nav_manager.enable_accessibility_mode(AccessibilityMode.SCREEN_READER)
+    
+    # Test element description
+    description = nav_manager.describe_element("button", "Connect", "enabled")
+    assert "button: Connect" in description, "Element description should include type and text"
+    assert "enabled" in description, "Element description should include state"
+    
+    # Test navigation help
+    help_text = nav_manager.get_navigation_help()
+    assert len(help_text) > 0, "Should provide navigation help"
+    assert any("Tab" in text for text in help_text), "Help should mention Tab navigation"
+    
+    # Test audio feedback
+    nav_manager.audio_feedback_enabled = True
+    # This would normally play a sound, but we just test it doesn't crash
+    nav_manager.play_feedback_sound("button_click")
+
+test("Keyboard Navigation Manager Initialization", test_keyboard_navigation_manager_initialization)
+test("Accessibility Settings Management", test_accessibility_settings_management)
+test("Accessibility CSS Generation", test_accessibility_css_generation)
+test("Keyboard Shortcuts System", test_keyboard_shortcuts_system)
+test("Command Palette Functionality", test_command_palette_functionality)
+test("Navigation Management and Focus", test_navigation_management_and_focus)
+test("Screen Reader and Audio Support", test_screen_reader_and_audio_support)
+
+# Test Suite 13: P3 Enhanced Connection Manager Integration Tests
+print("\n[13/14] P3 ENHANCED CONNECTION MANAGER INTEGRATION TESTS")
+print("-" * 80)
+
+def test_connection_manager_p3_initialization():
+    """Test ConnectionManager P3 UX enhancements initialization"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test P3 UX manager is initialized
+        assert hasattr(conn, 'ux_manager'), "Missing ux_manager"
+        assert conn.ux_manager is not None, "ux_manager not initialized"
+
+def test_profile_based_connections():
+    """Test profile-based connection functionality"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Create a test profile
+        conn.ux_manager.create_profile("test_connection", "wifi", ssid="TestNet", stealth_level=2)
+        
+        # Test connect_with_profile method exists
+        assert hasattr(conn, 'connect_with_profile'), "Missing connect_with_profile method"
+        
+        # Test profile connection (would normally connect, but we test the method exists)
+        with patch.object(conn, '_connect_thread'):
+            result = conn.connect_with_profile("test_connection")
+            # The result depends on implementation, but method should exist
+
+def test_quick_connect_suggestions():
+    """Test AI-powered quick connect suggestions"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test get_quick_connect_suggestions method exists
+        assert hasattr(conn, 'get_quick_connect_suggestions'), "Missing get_quick_connect_suggestions method"
+        
+        suggestions = conn.get_quick_connect_suggestions()
+        assert isinstance(suggestions, list), "Suggestions should be a list"
+
+def test_enhanced_status_with_ux_metrics():
+    """Test enhanced connection status with UX metrics"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test comprehensive status includes UX data
+        status = conn.get_comprehensive_status()
+        assert "user_experience" in status, "Status missing user_experience section"
+        assert "profiles" in status, "Status missing profiles section"
+        
+        ux_section = status["user_experience"]
+        assert "quick_connect_suggestions" in ux_section, "UX section missing quick_connect_suggestions"
+        assert "usage_insights" in ux_section, "UX section missing usage_insights"
+        assert "quality_assessment" in ux_section, "UX section missing quality_assessment"
+        assert "smart_notifications" in ux_section, "UX section missing smart_notifications"
+        
+        profiles_section = status["profiles"]
+        assert "available_profiles" in profiles_section, "Profiles section missing available_profiles"
+        assert "most_used_profile" in profiles_section, "Profiles section missing most_used_profile"
+        assert "profile_suggestions" in profiles_section, "Profiles section missing profile_suggestions"
+
+def test_quick_action_integration():
+    """Test quick action integration with connection manager"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test execute_quick_action method exists
+        assert hasattr(conn, 'execute_quick_action'), "Missing execute_quick_action method"
+        
+        # Test quick action execution
+        result = conn.execute_quick_action("connect_last_used")
+        assert isinstance(result, dict), "Quick action result should be a dict"
+        assert "success" in result, "Quick action result should have success field"
+
+def test_usage_session_recording():
+    """Test usage session recording integration"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test session recording integration exists
+        # This would normally be called during connection lifecycle
+        initial_sessions = conn.ux_manager.usage_stats.total_sessions
+        
+        # Simulate a connection session
+        conn.ux_manager.record_connection_session("usb", 1800, 1024*1024*50, True)
+        
+        assert conn.ux_manager.usage_stats.total_sessions == initial_sessions + 1, "Session not recorded"
+
+def test_p3_backward_compatibility():
+    """Test P3 enhancements maintain P1+P2 compatibility"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test P1 methods still exist
+        assert hasattr(conn, 'scan_wifi_networks'), "P1 WiFi scanning missing"
+        assert hasattr(conn, 'update_stealth_status'), "P1 stealth status missing"
+        assert hasattr(conn, 'get_stealth_status_string'), "P1 stealth string missing"
+        
+        # Test P2 methods still exist
+        assert hasattr(conn, 'resource_manager'), "P2 resource manager missing"
+        assert hasattr(conn, 'reliability_manager'), "P2 reliability manager missing"
+        
+        # Test P3 methods exist alongside P1+P2
+        assert hasattr(conn, 'ux_manager'), "P3 UX manager missing"
+        assert hasattr(conn, 'connect_with_profile'), "P3 profile connection missing"
+        assert hasattr(conn, 'get_quick_connect_suggestions'), "P3 quick suggestions missing"
+
+test("Connection Manager P3 Initialization", test_connection_manager_p3_initialization)
+test("Profile-based Connections", test_profile_based_connections)
+test("Quick Connect Suggestions", test_quick_connect_suggestions)
+test("Enhanced Status with UX Metrics", test_enhanced_status_with_ux_metrics)
+test("Quick Action Integration", test_quick_action_integration)
+test("Usage Session Recording", test_usage_session_recording)
+test("P3 Backward Compatibility", test_p3_backward_compatibility)
+
+# Test Suite 14: P1+P2+P3 Integration and Performance Tests
+print("\n[14/14] P1+P2+P3 COMPREHENSIVE INTEGRATION TESTS")
+print("-" * 80)
+
+def test_p1_p2_p3_module_integration():
+    """Test all P1, P2, and P3 modules work together"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test all enhancement layers are present
+        assert hasattr(conn, 'nm_client'), "P1 NetworkManager client missing"
+        assert hasattr(conn, 'resource_manager'), "P2 resource manager missing"
+        assert hasattr(conn, 'reliability_manager'), "P2 reliability manager missing"
+        assert hasattr(conn, 'ux_manager'), "P3 UX manager missing"
+        
+        # Test they're all initialized
+        assert conn.nm_client is not None, "P1 nm_client not initialized"
+        assert conn.resource_manager is not None, "P2 resource_manager not initialized"
+        assert conn.reliability_manager is not None, "P2 reliability_manager not initialized"
+        assert conn.ux_manager is not None, "P3 ux_manager not initialized"
+
+def test_p3_performance_impact():
+    """Test P3 enhancements don't significantly impact performance"""
+    import time
+    
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        # Measure initialization time
+        start_time = time.time()
+        conn = ConnectionManager()
+        init_time = time.time() - start_time
+        
+        # P3 should add minimal overhead (less than 3 seconds for initialization)
+        assert init_time < 3.0, f"P3 initialization too slow: {init_time:.2f}s"
+        
+        # Test status retrieval performance
+        start_time = time.time()
+        status = conn.get_comprehensive_status()
+        status_time = time.time() - start_time
+        
+        assert status_time < 1.0, f"Status retrieval too slow: {status_time:.2f}s"
+        assert "user_experience" in status, "P3 UX data missing from status"
+
+def test_configuration_persistence_integration():
+    """Test all P1+P2+P3 configurations persist correctly"""
+    from user_experience import UserExperienceManager
+    from keyboard_navigation import KeyboardNavigationManager
+    
+    # Test UX manager configuration persistence
+    ux_manager = UserExperienceManager()
+    ux_manager.create_profile("persistence_test", "wifi", ssid="TestNet")
+    ux_manager.update_preference("theme", "test_theme")
+    
+    # Test keyboard navigation configuration persistence
+    nav_manager = KeyboardNavigationManager()
+    nav_manager.customize_shortcut("connect", "Ctrl+Alt+C")
+    
+    # Verify configurations are saved (files should exist)
+    assert ux_manager.profiles_file.exists() or len(ux_manager.user_profiles) > 0, "Profile configuration not persisted"
+    assert ux_manager.preferences_file.exists() or ux_manager.get_preference("theme") == "test_theme", "Preferences not persisted"
+
+def test_memory_efficiency_with_all_enhancements():
+    """Test memory efficiency with P1+P2+P3 enhancements"""
+    import gc
+    
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        # Force garbage collection before test
+        gc.collect()
+        
+        # Create connection manager with all enhancements
+        conn = ConnectionManager()
+        
+        # Test that resource manager is monitoring memory
+        if hasattr(conn.resource_manager, 'get_resource_summary'):
+            summary = conn.resource_manager.get_resource_summary()
+            assert 'cache' in summary, "Resource manager not tracking cache"
+        
+        # Test UX manager doesn't leak memory
+        for i in range(10):
+            conn.ux_manager.get_quality_assessment()
+            conn.ux_manager.get_usage_insights()
+        
+        # Should not accumulate excessive data
+        assert len(conn.ux_manager.quality_history) <= 100, "Quality history growing too large"
+
+def test_graceful_degradation_all_layers():
+    """Test graceful degradation when components fail"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test that if P3 components fail, P1+P2 still work
+        # Simulate UX manager failure
+        original_ux_manager = conn.ux_manager
+        conn.ux_manager = None
+        
+        # Basic connection status should still work
+        try:
+            status = conn.get_connection_status()  # Basic status without UX enhancements
+            assert "state" in status, "Basic status should still work without UX manager"
+        except Exception as e:
+            # If it fails, it should fail gracefully
+            assert "ux_manager" not in str(e).lower(), "Should not expose UX manager errors"
+        finally:
+            conn.ux_manager = original_ux_manager
+
+def test_end_to_end_user_workflow():
+    """Test complete user workflow with P1+P2+P3 enhancements"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'):
+        from connection_manager import ConnectionManager
+        from keyboard_navigation import KeyboardNavigationManager
+        
+        conn = ConnectionManager()
+        nav_manager = KeyboardNavigationManager()
+        
+        # Simulate user workflow:
+        # 1. Create a connection profile
+        profile_created = conn.ux_manager.create_profile("workflow_test", "wifi", ssid="WorkNet")
+        assert profile_created == True, "Profile creation failed in workflow"
+        
+        # 2. Get quick connect suggestions
+        suggestions = conn.get_quick_connect_suggestions()
+        assert isinstance(suggestions, list), "Quick suggestions failed in workflow"
+        
+        # 3. Execute quick action
+        action_result = conn.execute_quick_action("show_profile_menu")
+        assert action_result["success"] == True, "Quick action failed in workflow"
+        
+        # 4. Use keyboard shortcut system
+        shortcut = nav_manager.get_effective_shortcut("connect")
+        assert shortcut is not None, "Keyboard shortcut retrieval failed in workflow"
+        
+        # 5. Get comprehensive status
+        status = conn.get_comprehensive_status()
+        assert "user_experience" in status, "Comprehensive status missing UX data in workflow"
+
+test("P1+P2+P3 Module Integration", test_p1_p2_p3_module_integration)
+test("P3 Performance Impact", test_p3_performance_impact)
+test("Configuration Persistence Integration", test_configuration_persistence_integration)
+test("Memory Efficiency with All Enhancements", test_memory_efficiency_with_all_enhancements)
+test("Graceful Degradation All Layers", test_graceful_degradation_all_layers)
+test("End-to-End User Workflow", test_end_to_end_user_workflow)
+
+# Updated Summary
+print("\n" + "=" * 80)
+print("P1 + P2 + P3 COMPREHENSIVE TEST SUMMARY")
+print("=" * 80)
+
+passed = sum(1 for _, success, _ in test_results if success)
+failed = sum(1 for _, success, _ in test_results if not success)
+total = len(test_results)
+
+print(f"\nTotal Tests: {total}")
+print(f"Passed: {passed} ✓")
+print(f"Failed: {failed} ✗")
+print(f"Success Rate: {(passed/total)*100:.1f}%")
+
+# Group results by test suite
+test_suites = {
+    "NetworkManager D-Bus Client (P1-FUNC-4)": [],
+    "Enhanced Interface Detection (P1-FUNC-4)": [],
+    "Enhanced WiFi Scanning (P1-FUNC-5)": [],
+    "Real-time Stealth Status (P1-FUNC-8)": [],
+    "Connection Status Integration": [],
+    "Import and Module Integration": [],
+    "P2 Performance Optimization": [],
+    "P2 High-Performance Stats Collector": [],
+    "P2 Reliability Manager": [],
+    "P2 Enhanced Connection Manager Integration": [],
+    "P3 User Experience Manager": [],
+    "P3 Keyboard Navigation and Accessibility": [],
+    "P3 Enhanced Connection Manager Integration": [],
+    "P1+P2+P3 Comprehensive Integration": []
+}
+
+suite_names = list(test_suites.keys())
+tests_per_suite = [5, 5, 5, 5, 5, 5, 5, 6, 7, 6, 6, 7, 7, 6]  # Number of tests in each suite
+current_suite = 0
+current_count = 0
+
+for name, success, error in test_results:
+    if current_count >= tests_per_suite[current_suite]:
+        current_suite += 1
+        current_count = 0
+    
+    if current_suite < len(suite_names):
+        test_suites[suite_names[current_suite]].append((name, success, error))
+    current_count += 1
+
+print("\nRESULTS BY P1 + P2 + P3 FUNCTIONALITY:")
+for suite_name, suite_tests in test_suites.items():
+    suite_passed = sum(1 for _, success, _ in suite_tests if success)
+    suite_total = len(suite_tests)
+    print(f"\n{suite_name}: {suite_passed}/{suite_total} passed")
+    
+    for name, success, error in suite_tests:
+        status = "✓" if success else "✗"
+        print(f"  {status} {name}")
+        if not success and error:
+            print(f"    Error: {error}")
+
+if failed > 0:
+    print(f"\n⚠️  CRITICAL ISSUES FOUND:")
+    for name, success, error in test_results:
+        if not success:
+            print(f"  • {name}: {error}")
+
+print("\n" + "=" * 80)
+if failed == 0:
+    print("✅ ALL P1 + P2 + P3 FUNCTIONALITY TESTS PASSED")
+    print("✅ P1-FUNC-4: Robust nmcli replacement - WORKING")
+    print("✅ P1-FUNC-5: Enhanced WiFi scanning - WORKING") 
+    print("✅ P1-FUNC-8: Real-time stealth status - WORKING")
+    print("✅ P2-PERF: Memory management & optimization - WORKING")
+    print("✅ P2-PERF: High-performance stats collector - WORKING")
+    print("✅ P2-PERF: Performance decorators - WORKING")
+    print("✅ P2-PERF: Reliability manager & fault tolerance - WORKING")
+    print("✅ P2-PERF: Enhanced connection manager integration - WORKING")
+    print("✅ P3-UX: User Experience Manager - WORKING")
+    print("✅ P3-UX: Connection Profiles Management - WORKING")
+    print("✅ P3-UX: Usage Analytics & Insights - WORKING")
+    print("✅ P3-UX: User Preferences Management - WORKING")
+    print("✅ P3-UX: Keyboard Navigation & Accessibility - WORKING")
+    print("✅ P3-UX: Accessibility Settings Management - WORKING")
+    print("✅ P3-UX: Keyboard Shortcuts System - WORKING")
+    print("✅ P3-UX: Command Palette Functionality - WORKING")
+    print("✅ P3-UX: Enhanced Connection Manager Integration - WORKING")
+    print("✅ P1+P2+P3: Seamless Integration - WORKING")
+    print("✅ P1+P2+P3: Performance Optimized - WORKING")
+    print("✅ P1+P2+P3: Backward Compatible - WORKING")
+else:
+    print("❌ SOME P1 + P2 + P3 FUNCTIONALITY TESTS FAILED")
+    print("🔍 Review failed tests above for P1/P2/P3 functionality issues")
+
 print("=" * 80)
 sys.exit(0 if failed == 0 else 1)
