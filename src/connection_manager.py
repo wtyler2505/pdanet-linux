@@ -1172,10 +1172,6 @@ class ConnectionManager:
                 result["speed_test_started"] = True
                 
         return result
-        if hasattr(self, 'reliability_manager'):
-            base_status['network_health'] = self.reliability_manager.check_connection_health().value
-        
-        return base_status
 
     def _handle_disconnect_and_reconnect(self):
         """Handle unexpected disconnect and attempt reconnection"""
