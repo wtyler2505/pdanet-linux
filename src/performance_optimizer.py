@@ -232,23 +232,33 @@ class ResourceManager:
                 # Track memory usage
                 self.memory_optimizer.track_memory_usage()
                 
-                # Check memory growth trend
+                # Check memory growth trend (reduce frequency of warnings)
                 trend = self.memory_optimizer.get_memory_trend()
                 
-                # Trigger optimization if memory growing too fast
-                if trend['growth_rate'] > 1024 * 1024:  # > 1MB/second growth
+                # Only warn about memory growth occasionally, not constantly
+                if (trend['growth_rate'] > 1024 * 1024 and 
+                    not hasattr(self, '_last_memory_warning') or 
+                    time.time() - getattr(self, '_last_memory_warning', 0) > 60):  # Max once per minute
                     self.logger.warning(f"High memory growth detected: {trend['growth_rate'] / 1024 / 1024:.1f}MB/s")
+                    self._last_memory_warning = time.time()
                     self.memory_optimizer.optimize_memory()
                 
-                # Clear expired cache entries
+                # Clear expired cache entries (reduce logging frequency)
                 expired_count = self.cache.clear_expired()
-                if expired_count > 0:
+                if (expired_count > 10 and  # Only log if significant cleanup
+                    (not hasattr(self, '_last_cache_log') or 
+                     time.time() - getattr(self, '_last_cache_log', 0) > 300)):  # Max once per 5 minutes
                     self.logger.debug(f"Cleared {expired_count} expired cache entries")
+                    self._last_cache_log = time.time()
                 
                 time.sleep(interval)
                 
             except Exception as e:
-                self.logger.error(f"Resource monitoring error: {e}")
+                # Reduce error logging frequency
+                if (not hasattr(self, '_last_error_log') or 
+                    time.time() - getattr(self, '_last_error_log', 0) > 30):  # Max once per 30 seconds
+                    self.logger.error(f"Resource monitoring error: {e}")
+                    self._last_error_log = time.time()
                 time.sleep(interval)
     
     def get_resource_summary(self) -> Dict[str, Any]:
