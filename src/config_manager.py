@@ -200,7 +200,7 @@ class ConfigManager:
                     self.config_file.rename(corrupted_backup)
                     if logger:
                         logger.info(f"Corrupted config backed up to: {corrupted_backup}")
-                except:
+                except Exception:
                     pass
                 
                 # Return defaults
