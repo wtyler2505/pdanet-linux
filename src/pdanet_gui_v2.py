@@ -1999,8 +1999,8 @@ class PdaNetGUI(Gtk.Window):
             
             # Create dashboard instance
             dashboard = DataUsageDashboard(
-                stats_collector=self.stats,
-                connection_manager=self.connection
+                config_manager=self.config,
+                stats_collector=self.stats
             )
             
             # Add dashboard to window with padding
