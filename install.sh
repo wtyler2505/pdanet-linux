@@ -110,8 +110,10 @@ echo -e "${YELLOW}[5/7]${NC} Setting up user permissions..."
 
 # Allow current user to run connect/disconnect scripts without password
 REAL_USER="${SUDO_USER:-$USER}"
-if [ -z "$REAL_USER" ]; then
-    REAL_USER="wtyler"  # Fallback to current user
+if [ -z "$REAL_USER" ] || [ "$REAL_USER" = "root" ]; then
+    echo -e "${RED}Error: Cannot determine non-root user${NC}"
+    echo "Please run with: sudo -u <username> $0"
+    exit 1
 fi
 SUDOERS_FILE="/etc/sudoers.d/pdanet-linux"
 
