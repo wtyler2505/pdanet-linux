@@ -22,6 +22,7 @@ from stats_collector import get_stats
 from nm_client import NMClient
 from performance_optimizer import get_resource_manager, timed_operation, resource_context
 from reliability_manager import get_reliability_manager
+from user_experience import get_ux_manager
 from input_validators import (
     ValidationError,
     validate_ssid,
