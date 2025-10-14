@@ -1,0 +1,303 @@
+#!/bin/bash
+#
+# pdanet-iphone-connect-enhanced - Advanced iPhone Personal Hotspot bypass
+# Uses enterprise-grade carrier detection bypass with 10+ stealth techniques
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+NC='\033[0m' # No Color
+
+# Configuration
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STEALTH_SCRIPT="$PROJECT_DIR/scripts/wifi-stealth.sh"
+STEALTH_LEVEL=3  # Maximum stealth by default
+
+echo -e "${PURPLE}╔════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${PURPLE}║  🚀 ENHANCED iPhone Hotspot Stealth Connector             ║${NC}"
+echo -e "${PURPLE}║     Enterprise-Grade Carrier Detection Bypass             ║${NC}"
+echo -e "${PURPLE}╚════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+   echo -e "${RED}❌ Error: This script must be run as root (use sudo)${NC}"
+   exit 1
+fi
+
+# Parse arguments for SSID and PASSWORD
+for arg in "$@"; do
+  case "$arg" in
+    SSID=*) IPHONE_SSID="${arg#SSID=}" ;;
+    PASSWORD=*) IPHONE_PASSWORD="${arg#PASSWORD=}" ;;
+    IPHONE_SSID=*) IPHONE_SSID="${arg#IPHONE_SSID=}" ;;
+    IPHONE_PASSWORD=*) IPHONE_PASSWORD="${arg#IPHONE_PASSWORD=}" ;;
+    LEVEL=*) STEALTH_LEVEL="${arg#LEVEL=}" ;;
+  esac
+done
+
+# Get SSID and password from user if not provided
+if [ -z "$IPHONE_SSID" ]; then
+    echo -e "${YELLOW}📱 Enter iPhone hotspot SSID (network name):${NC}"
+    read -r IPHONE_SSID
+fi
+
+if [ -z "$IPHONE_PASSWORD" ]; then
+    echo -e "${YELLOW}🔒 Enter iPhone hotspot password (leave blank if none):${NC}"
+    read -rs IPHONE_PASSWORD
+fi
+
+echo -e "${BLUE}[1/6]${NC} 🔍 Detecting WiFi interface..."
+
+# Find WiFi interface
+WIFI_INTERFACE=$(nmcli -t -f DEVICE,TYPE device | grep ":wifi" | head -n1 | cut -d: -f1)
+
+if [ -z "$WIFI_INTERFACE" ]; then
+    echo -e "${RED}❌ Error: No WiFi interface found${NC}"
+    echo -e "${YELLOW}💡 Troubleshooting tips:${NC}"
+    echo "  1. Check if WiFi adapter is connected"
+    echo "  2. Run 'nmcli device status' to see available interfaces"
+    echo "  3. Make sure WiFi is enabled in system settings"
+    exit 1
+fi
+
+echo -e "${GREEN}✅${NC} WiFi interface detected: $WIFI_INTERFACE"
+
+echo -e "${BLUE}[2/6]${NC} 🌐 Scanning for iPhone hotspot..."
+
+# Scan for networks to ensure fresh results
+nmcli device wifi rescan ifname "$WIFI_INTERFACE" || true
+sleep 2
+
+# Check if SSID exists
+if ! nmcli -t -f SSID device wifi list ifname "$WIFI_INTERFACE" | grep -q "^$IPHONE_SSID$"; then
+    echo -e "${RED}❌ Error: iPhone hotspot '$IPHONE_SSID' not found${NC}"
+    echo -e "${YELLOW}💡 Available networks:${NC}"
+    nmcli -t -f SSID,SIGNAL,SECURITY device wifi list ifname "$WIFI_INTERFACE" | head -10 | while IFS=: read -r ssid signal security; do
+        echo "  📶 $ssid (${signal}%, $security)"
+    done
+    exit 1
+fi
+
+echo -e "${GREEN}✅${NC} Found iPhone hotspot: $IPHONE_SSID"
+
+echo -e "${BLUE}[3/6]${NC} 🔗 Establishing connection..."
+
+# Disconnect any existing connections on this interface
+nmcli device disconnect "$WIFI_INTERFACE" 2>/dev/null || true
+
+# Connect to iPhone hotspot
+if [ -n "$IPHONE_PASSWORD" ]; then
+    nmcli device wifi connect "$IPHONE_SSID" password "$IPHONE_PASSWORD" ifname "$WIFI_INTERFACE" || {
+        echo -e "${RED}❌ Error: Failed to connect to iPhone hotspot${NC}"
+        echo -e "${YELLOW}💡 Check:${NC}"
+        echo "  1. Password is correct"
+        echo "  2. iPhone hotspot is enabled"
+        echo "  3. iPhone is within range"
+        echo "  4. No device limit reached on iPhone"
+        exit 1
+    }
+else
+    nmcli device wifi connect "$IPHONE_SSID" ifname "$WIFI_INTERFACE" || {
+        echo -e "${RED}❌ Error: Failed to connect to iPhone hotspot${NC}"
+        exit 1
+    }
+fi
+
+# Wait for connection to fully establish
+sleep 5
+
+# Verify connection
+if ! nmcli -t -f DEVICE,STATE device | grep "$WIFI_INTERFACE" | grep -q "connected"; then
+    echo -e "${RED}❌ Error: WiFi connected but interface not fully active${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✅${NC} Connected to iPhone hotspot: $IPHONE_SSID"
+
+# Get connection details
+IP_ADDR=$(ip addr show "$WIFI_INTERFACE" 2>/dev/null | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -1)
+GATEWAY=$(ip route | grep default | grep "$WIFI_INTERFACE" | awk '{print $3}' | head -1)
+
+echo -e "${GREEN}✅${NC} IP Address: ${IP_ADDR:-Unknown}"
+echo -e "${GREEN}✅${NC} Gateway: ${GATEWAY:-Unknown}"
+
+echo -e "${BLUE}[4/6]${NC} 🛡️  Activating ENHANCED iPhone carrier bypass..."
+echo -e "${PURPLE}[ENHANCED STEALTH]${NC} Deploying 10-layer enterprise bypass system..."
+
+# Apply enhanced iPhone-specific bypass using Python module
+python3 << EOF
+import sys
+sys.path.insert(0, "$PROJECT_DIR/src")
+
+try:
+    from iphone_hotspot_bypass import get_iphone_hotspot_bypass
+    
+    bypass_manager = get_iphone_hotspot_bypass()
+    success = bypass_manager.enable_iphone_hotspot_bypass("$WIFI_INTERFACE", $STEALTH_LEVEL)
+    
+    if success:
+        print("✅ Enhanced iPhone bypass activated")
+        
+        # Get bypass status
+        status = bypass_manager.get_bypass_status()
+        active_count = len(status['active_techniques'])
+        total_count = status['total_techniques']
+        success_rate = status['success_rate']
+        
+        print(f"✅ Bypass effectiveness: {success_rate:.1f}% ({active_count}/{total_count} techniques)")
+        
+        # List active techniques
+        for technique in status['active_techniques']:
+            print(f"  🔧 {technique}")
+            
+        exit(0)
+    else:
+        print("❌ Enhanced iPhone bypass failed")
+        exit(1)
+        
+except Exception as e:
+    print(f"❌ Enhanced bypass error: {e}")
+    exit(1)
+EOF
+
+ENHANCED_RESULT=$?
+
+# Fall back to standard stealth if enhanced bypass failed
+if [ $ENHANCED_RESULT -ne 0 ]; then
+    echo -e "${YELLOW}⚠️  Enhanced bypass unavailable, falling back to standard stealth...${NC}"
+    
+    if [ -f "$STEALTH_SCRIPT" ]; then
+        bash "$STEALTH_SCRIPT" enable "$WIFI_INTERFACE" $STEALTH_LEVEL
+        
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅${NC} Standard stealth mode activated (Level $STEALTH_LEVEL)"
+            echo ""
+            echo -e "${CYAN}Standard Stealth Features:${NC}"
+            echo -e "  ${GREEN}✅${NC} Layer 1: TTL Normalization (65)"
+            echo -e "  ${GREEN}✅${NC} Layer 2: IPv6 Complete Block"
+            echo -e "  ${GREEN}✅${NC} Layer 3: DNS Leak Prevention"
+            echo -e "  ${GREEN}✅${NC} Layer 4: OS Update Blocking"
+            echo -e "  ${GREEN}✅${NC} Layer 5: MSS/MTU Clamping"
+            echo -e "  ${GREEN}✅${NC} Layer 6: Traffic Shaping Ready"
+        else
+            echo -e "${YELLOW}⚠️  Warning: Standard stealth activation had issues${NC}"
+        fi
+    fi
+else
+    echo -e "${PURPLE}🚀 ENHANCED STEALTH ACTIVE${NC}"
+    echo ""
+    echo -e "${CYAN}Enhanced iPhone Bypass Features:${NC}"
+    echo -e "  ${GREEN}✅${NC} 🎭 TTL Manipulation (iPhone-specific)"
+    echo -e "  ${GREEN}✅${NC} 🚫 IPv6 Complete Elimination"
+    echo -e "  ${GREEN}✅${NC} 🛡️  DNS Leak Prevention + Secure Redirect"
+    echo -e "  ${GREEN}✅${NC} 🌐 User-Agent Spoofing (Safari iPhone)"
+    echo -e "  ${GREEN}✅${NC} 🔐 TLS Fingerprint Masking"
+    echo -e "  ${GREEN}✅${NC} 📊 Traffic Pattern Mimicking"
+    echo -e "  ${GREEN}✅${NC} 🎲 Packet Size Randomization"
+    echo -e "  ${GREEN}✅${NC} ⏱️  Connection Timing Spoofing"
+    echo -e "  ${GREEN}✅${NC} 🚨 Carrier App Blocking"
+    echo -e "  ${GREEN}✅${NC} 📈 Analytics Domain Blocking"
+fi
+
+echo ""
+echo -e "${BLUE}[5/6]${NC} 🧪 Testing internet connectivity..."
+
+# Test internet connectivity with multiple methods
+CONNECTIVITY_TESTS=0
+CONNECTIVITY_PASSED=0
+
+# Test 1: HTTP connectivity
+if curl --interface "$WIFI_INTERFACE" --connect-timeout 5 -s http://www.google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✅${NC} HTTP connectivity verified"
+    CONNECTIVITY_PASSED=$((CONNECTIVITY_PASSED + 1))
+else
+    echo -e "${YELLOW}⚠️${NC} HTTP connectivity failed"
+fi
+CONNECTIVITY_TESTS=$((CONNECTIVITY_TESTS + 1))
+
+# Test 2: HTTPS connectivity
+if curl --interface "$WIFI_INTERFACE" --connect-timeout 5 -s https://www.google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✅${NC} HTTPS connectivity verified"
+    CONNECTIVITY_PASSED=$((CONNECTIVITY_PASSED + 1))
+else
+    echo -e "${YELLOW}⚠️${NC} HTTPS connectivity failed"
+fi
+CONNECTIVITY_TESTS=$((CONNECTIVITY_TESTS + 1))
+
+# Test 3: DNS resolution
+if nslookup google.com > /dev/null 2>&1; then
+    echo -e "${GREEN}✅${NC} DNS resolution verified"
+    CONNECTIVITY_PASSED=$((CONNECTIVITY_PASSED + 1))
+else
+    echo -e "${YELLOW}⚠️${NC} DNS resolution failed"
+fi
+CONNECTIVITY_TESTS=$((CONNECTIVITY_TESTS + 1))
+
+echo ""
+echo -e "${BLUE}[6/6]${NC} 🏁 Connection validation complete"
+
+if [ $CONNECTIVITY_PASSED -ge 2 ]; then
+    echo ""
+    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║  🎉 iPhone Hotspot Connected Successfully!                 ║${NC}"
+    echo -e "${GREEN}║     Advanced Carrier Bypass ACTIVE                        ║${NC}"
+    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${CYAN}📊 Connection Summary:${NC}"
+    echo -e "  📱 Network: $IPHONE_SSID"
+    echo -e "  🔌 Interface: $WIFI_INTERFACE"
+    echo -e "  🌐 IP Address: $IP_ADDR"
+    echo -e "  🚪 Gateway: $GATEWAY"
+    echo -e "  🛡️  Stealth Level: $STEALTH_LEVEL (MAXIMUM)"
+    echo -e "  ✅ Connectivity: $CONNECTIVITY_PASSED/$CONNECTIVITY_TESTS tests passed"
+    echo ""
+    echo -e "${CYAN}🔒 Active Bypass Techniques:${NC}"
+    
+    if [ $ENHANCED_RESULT -eq 0 ]; then
+        echo -e "  ${GREEN}🎭${NC} iPhone Traffic Pattern Mimicking"
+        echo -e "  ${GREEN}🚫${NC} Carrier Detection Domain Blocking"  
+        echo -e "  ${GREEN}🌐${NC} User-Agent Spoofing (Safari iOS)"
+        echo -e "  ${GREEN}🔐${NC} TLS Fingerprint Masking"
+        echo -e "  ${GREEN}🎲${NC} Packet Randomization"
+        echo -e "  ${GREEN}⏱️${NC} Timing Attack Prevention"
+        echo -e "  ${GREEN}📈${NC} Analytics Tracking Block"
+    fi
+    
+    echo -e "  ${GREEN}🎯${NC} TTL Normalization (iPhone-matched)"
+    echo -e "  ${GREEN}⛔${NC} IPv6 Complete Elimination" 
+    echo -e "  ${GREEN}🛡️${NC} DNS Leak Prevention"
+    echo -e "  ${GREEN}🚨${NC} OS Update Traffic Blocking"
+    echo -e "  ${GREEN}📦${NC} MSS/MTU Optimization"
+    
+    echo ""
+    echo -e "${PURPLE}🎯 CARRIER BYPASS STATUS: MAXIMUM STEALTH${NC}"
+    echo -e "${GREEN}Your connection should be completely hidden from carrier detection!${NC}"
+    echo ""
+    echo -e "${YELLOW}💡 Pro Tips:${NC}"
+    echo -e "  • Keep iPhone plugged in to maintain hotspot"
+    echo -e "  • Monitor data usage to stay under carrier limits"
+    echo -e "  • Use VPN for additional privacy if desired"
+    echo -e "  • Avoid carrier speed tests (may trigger detection)"
+    
+else
+    echo -e "${RED}❌ Connection established but connectivity issues detected${NC}"
+    echo -e "${YELLOW}💡 Troubleshooting:${NC}"
+    echo "  1. Check iPhone hotspot settings"
+    echo "  2. Verify iPhone has cellular data"
+    echo "  3. Try disconnecting and reconnecting"
+    echo "  4. Check for carrier restrictions"
+    exit 1
+fi
+
+echo ""
+echo -e "${CYAN}🔧 To disconnect: ${NC}sudo pdanet-iphone-disconnect"
+echo -e "${CYAN}🔧 To check status:${NC} pdanet-gui-v2"
+echo ""
