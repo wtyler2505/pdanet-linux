@@ -674,11 +674,11 @@ class ConnectionManager:
                 if mode == "usb":
                     interface = self.detect_interface()
                     if not interface:
-                        error_msg = "No USB interface detected"
-                        self.last_error = error_msg
-                        self._set_state(ConnectionState.ERROR)
-                        self._notify_error(error_msg)
-                        self.reliability_manager.report_failure("interface_detection", error_msg)
+                        self._handle_error_with_code(
+                            "interface_not_found",
+                            "No USB interface detected",
+                            {"mode": mode}
+                        )
                         return
 
                     # Step 2: Validate proxy
