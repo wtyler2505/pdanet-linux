@@ -1,0 +1,83 @@
+
+# AI-Enhanced PDanet-Linux Configuration
+
+environment: development
+
+# Database Configuration
+database:
+  host: localhost
+  port: 5432
+  database: pdanet_ai
+  username: pdanet_user
+  password: your_secure_password_here
+  pool_size: 10
+  max_overflow: 20
+
+# Redis Configuration
+redis:
+  host: localhost
+  port: 6379
+  database: 0
+  password: null
+  max_connections: 100
+
+# Machine Learning Configuration
+ml:
+  models_dir: ml_models
+  data_dir: data
+  batch_size: 32
+  learning_rate: 0.001
+  max_epochs: 100
+  device: auto  # auto, cpu, cuda
+  enable_gpu: true
+
+# Network Configuration
+network:
+  default_interface: tun0
+  monitoring_interval: 5  # seconds
+  optimization_interval: 30  # seconds
+  max_connections: 1000
+  connection_timeout: 30
+  enable_ipv6: false
+
+# Security Configuration
+security:
+  enable_monitoring: true
+  threat_detection_threshold: 0.7
+  auto_response_enabled: true
+  max_threat_response_actions: 5
+  security_log_retention_days: 30
+  whitelist_ips: []
+  blacklist_ips: []
+
+# API Configuration
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 4
+  max_request_size: 16777216  # 16MB
+  request_timeout: 300
+  enable_cors: true
+  cors_origins: ["*"]
+  api_key_required: true
+  rate_limit_requests: 1000
+  rate_limit_window: 3600  # 1 hour
+
+# Logging Configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: logs/pdanet_ai.log
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+  enable_json_logging: false
+  log_to_console: true
+  log_sql_queries: false
+
+# Monitoring Configuration
+monitoring:
+  enable_prometheus: true
+  prometheus_port: 9090
+  metrics_retention_days: 7
+  health_check_interval: 30
+  enable_detailed_metrics: true
