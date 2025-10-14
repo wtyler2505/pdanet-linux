@@ -405,7 +405,7 @@ class ConfigValidator:
                         else:
                             fixed_config[key] = bool(fixed_config[key])
                         warnings.append(f"Converted '{key}' to boolean")
-                    except:
+                    except Exception:
                         fixed_config[key] = self.DEFAULTS.get(key, False)
                         warnings.append(f"Reset '{key}' to default due to invalid value")
                 
