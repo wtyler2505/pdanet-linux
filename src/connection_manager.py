@@ -662,11 +662,11 @@ class ConnectionManager:
                         if password:
                             validate_password(password)
                 except ValidationError as e:
-                    error_msg = f"Invalid input: {e}"
-                    self.last_error = error_msg
-                    self._set_state(ConnectionState.ERROR)
-                    self._notify_error(error_msg)
-                    self.reliability_manager.report_failure("validation_error", error_msg)
+                    self._handle_error_with_code(
+                        "input_validation_failed",
+                        f"Invalid input: {e}", 
+                        {"mode": mode, "ssid": ssid, "validation_error": str(e)}
+                    )
                     self.logger.error(f"Input validation failed: {e}")
                     return
                 
