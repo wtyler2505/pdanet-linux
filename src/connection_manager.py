@@ -1408,18 +1408,20 @@ class ConnectionManager:
                     self.logger.warning("iPhone connection succeeded but interface detection failed")
                     return True  # Connection still works
             else:
-                error_msg = f"iPhone connection script failed: {result.stderr if result else 'No result'}"
-                self.last_error = error_msg
-                self._set_state(ConnectionState.ERROR)
-                self.reliability_manager.report_failure("iphone_connection_failed", error_msg)
+                self._handle_error_with_code(
+                    "iphone_connection_failed",
+                    f"iPhone connection script failed: {result.stderr if result else 'No result'}",
+                    {"script": script, "ssid": ssid, "returncode": result.returncode if result else None}
+                )
                 return False
                 
         except Exception as e:
-            error_msg = f"iPhone hotspot connection error: {e}"
-            self.last_error = error_msg
-            self._set_state(ConnectionState.ERROR) 
-            self.reliability_manager.report_failure("iphone_connection_exception", error_msg)
-            self.logger.error(error_msg)
+            self._handle_error_with_code(
+                "iphone_connection_exception",
+                f"iPhone hotspot connection error: {e}",
+                {"ssid": ssid, "enhanced_bypass": enhanced_bypass, "exception_type": type(e).__name__}
+            )
+            self.logger.error(f"iPhone hotspot connection error: {e}")
             return False
     
     def get_iphone_bypass_status(self) -> Dict[str, Any]:
