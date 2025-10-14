@@ -1111,10 +1111,10 @@ class ConnectionManager:
     
     def get_enhanced_status_with_ux(self) -> Dict[str, Any]:
         """Get comprehensive status including UX metrics and suggestions"""
-        base_status = self.get_comprehensive_status()
+        status = self.get_comprehensive_status()
         
         # Add UX enhancements
-        base_status.update({
+        status.update({
             "user_experience": {
                 "quick_connect_suggestions": self.get_quick_connect_suggestions(),
                 "usage_insights": self.ux_manager.get_usage_insights(),
@@ -1134,7 +1134,7 @@ class ConnectionManager:
             }
         })
         
-        return base_status
+        return status
     
     def _calculate_current_quality_score(self) -> int:
         """Calculate current connection quality score (0-100)"""
