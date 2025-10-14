@@ -1351,8 +1351,11 @@ class ConnectionManager:
                 script = self.iphone_connect_script
             
             if not script:
-                self.last_error = "iPhone connection script not found"
-                self.reliability_manager.report_failure("iphone_script_missing", self.last_error)
+                self._handle_error_with_code(
+                    "iphone_script_not_found",
+                    "iPhone connection script not found",
+                    {"mode": "iphone", "enhanced_bypass": enhanced_bypass}
+                )
                 return False
             
             # Step 2: Execute connection with enhanced stealth
