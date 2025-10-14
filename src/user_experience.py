@@ -280,9 +280,12 @@ class UserExperienceManager:
             
             # Time-based suggestions
             if profile.last_used:
-                last_used_time = datetime.fromisoformat(profile.last_used)
-                if abs(last_used_time.hour - current_hour) <= 1:
-                    score += 20  # Same time of day
+                try:
+                    last_used_time = datetime.fromisoformat(profile.last_used)
+                    if abs(last_used_time.hour - current_hour) <= 1:
+                        score += 20  # Same time of day
+                except (ValueError, TypeError):
+                    pass  # Invalid timestamp format
             
             # Usage frequency
             score += min(profile.use_count * 2, 30)
