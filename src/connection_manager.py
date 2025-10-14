@@ -1062,26 +1062,36 @@ class ConnectionManager:
     
     def get_quick_connect_suggestions(self) -> List[Dict[str, Any]]:
         """Get AI-suggested connection profiles for quick connect"""
-        current_context = {
-            "current_time": datetime.now().hour,
-            "preferred_mode": self.ux_manager.get_preference("preferred_connection_mode", "usb"),
-            "current_location": "unknown",  # Could be enhanced with location detection
-            "connection_history": self._get_recent_connection_history()
-        }
-        
-        suggestions = self.ux_manager.get_suggested_profiles(current_context)
-        
-        return [
-            {
-                "profile_name": profile.name,
-                "mode": profile.mode,
-                "description": profile.description or f"{profile.mode.upper()} connection",
-                "last_used": profile.last_used,
-                "use_count": profile.use_count,
-                "estimated_success_rate": self._estimate_profile_success_rate(profile)
+        try:
+            current_context = {
+                "current_time": datetime.now().hour,
+                "preferred_mode": self.ux_manager.get_preference("preferred_connection_mode", "usb"),
+                "current_location": "unknown",  # Could be enhanced with location detection
+                "connection_history": self._get_recent_connection_history()
             }
-            for profile in suggestions
-        ]
+            
+            suggestions = self.ux_manager.get_suggested_profiles(current_context)
+            
+            result = []
+            for profile in suggestions:
+                try:
+                    result.append({
+                        "profile_name": profile.name,
+                        "mode": profile.mode,
+                        "description": profile.description or f"{profile.mode.upper()} connection",
+                        "last_used": profile.last_used,
+                        "use_count": profile.use_count,
+                        "estimated_success_rate": self._estimate_profile_success_rate(profile)
+                    })
+                except Exception as e:
+                    self.logger.warning(f"Error processing profile {profile.name}: {e}")
+                    continue
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Error getting quick connect suggestions: {e}")
+            return []
     
     def _get_recent_connection_history(self) -> List[Dict[str, Any]]:
         """Get recent connection history for context"""
