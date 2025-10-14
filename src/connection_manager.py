@@ -136,6 +136,7 @@ class ConnectionManager:
         # Advanced features (P4)
         self.network_monitor = get_advanced_network_monitor()
         self.bandwidth_manager = get_intelligent_bandwidth_manager()
+        self.iphone_bypass = get_iphone_hotspot_bypass()
         
         # Start performance monitoring and reliability checks
         self.resource_manager.start_monitoring(interval=60)
