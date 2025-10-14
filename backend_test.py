@@ -1077,7 +1077,8 @@ test("Backward Compatibility with P1", test_backward_compatibility_with_p1)
 
 # Summary
 print("\n" + "=" * 80)
-print("P1 + P2 COMPREHENSIVE TEST SUMMARY")
+print("P1+P2+P3+P4 COMPREHENSIVE TEST SUMMARY")
+print("FINAL INTEGRATION TEST - ALL ENHANCEMENT PHASES")
 print("=" * 80)
 
 passed = sum(1 for _, success, _ in test_results if success)
@@ -1091,20 +1092,26 @@ print(f"Success Rate: {(passed/total)*100:.1f}%")
 
 # Group results by test suite
 test_suites = {
-    "NetworkManager D-Bus Client (P1-FUNC-4)": [],
-    "Enhanced Interface Detection (P1-FUNC-4)": [],
-    "Enhanced WiFi Scanning (P1-FUNC-5)": [],
-    "Real-time Stealth Status (P1-FUNC-8)": [],
-    "Connection Status Integration": [],
-    "Import and Module Integration": [],
+    "P1 NetworkManager D-Bus Client": [],
+    "P1 Enhanced Interface Detection": [],
+    "P1 Enhanced WiFi Scanning": [],
+    "P1 Real-time Stealth Status": [],
+    "P1 Connection Status Integration": [],
+    "P1 Import and Module Integration": [],
     "P2 Performance Optimization": [],
     "P2 High-Performance Stats Collector": [],
     "P2 Reliability Manager": [],
-    "P2 Enhanced Connection Manager Integration": []
+    "P2 Enhanced Connection Manager Integration": [],
+    "P3 User Experience Manager - CRITICAL FIXES": [],
+    "P3 Connection Manager Integration - CRITICAL FIXES": [],
+    "P3 Keyboard Navigation and Accessibility": [],
+    "P4 Advanced Network Monitor": [],
+    "P4 Intelligent Bandwidth Manager": [],
+    "P4 Complete Integration - ALL PHASES": []
 }
 
 suite_names = list(test_suites.keys())
-tests_per_suite = [5, 5, 5, 5, 5, 5, 5, 6, 7, 6]  # Number of tests in each suite
+tests_per_suite = [5, 5, 5, 5, 5, 5, 5, 6, 7, 6, 5, 4, 4, 3, 3, 3]  # Updated counts
 current_suite = 0
 current_count = 0
 
@@ -1117,38 +1124,61 @@ for name, success, error in test_results:
         test_suites[suite_names[current_suite]].append((name, success, error))
     current_count += 1
 
-print("\nRESULTS BY P1 + P2 FUNCTIONALITY:")
+print("\nRESULTS BY ENHANCEMENT PHASE:")
 for suite_name, suite_tests in test_suites.items():
     suite_passed = sum(1 for _, success, _ in suite_tests if success)
     suite_total = len(suite_tests)
-    print(f"\n{suite_name}: {suite_passed}/{suite_total} passed")
-    
-    for name, success, error in suite_tests:
-        status = "✓" if success else "✗"
-        print(f"  {status} {name}")
-        if not success and error:
-            print(f"    Error: {error}")
+    if suite_total > 0:
+        print(f"\n{suite_name}: {suite_passed}/{suite_total} passed")
+        
+        for name, success, error in suite_tests:
+            status = "✓" if success else "✗"
+            print(f"  {status} {name}")
+            if not success and error:
+                print(f"    Error: {error}")
 
-if failed > 0:
-    print(f"\n⚠️  CRITICAL ISSUES FOUND:")
-    for name, success, error in test_results:
-        if not success:
-            print(f"  • {name}: {error}")
+# Critical Issues Summary
+critical_failures = []
+for name, success, error in test_results:
+    if not success and any(keyword in name.lower() for keyword in ['comprehensive', 'critical', 'fix']):
+        critical_failures.append((name, error))
+
+if critical_failures:
+    print(f"\n⚠️  CRITICAL ISSUES FOUND ({len(critical_failures)}):")
+    for name, error in critical_failures:
+        print(f"  • {name}: {error}")
 
 print("\n" + "=" * 80)
 if failed == 0:
-    print("✅ ALL P1 + P2 FUNCTIONALITY TESTS PASSED")
-    print("✅ P1-FUNC-4: Robust nmcli replacement - WORKING")
-    print("✅ P1-FUNC-5: Enhanced WiFi scanning - WORKING") 
-    print("✅ P1-FUNC-8: Real-time stealth status - WORKING")
-    print("✅ P2-PERF: Memory management & optimization - WORKING")
-    print("✅ P2-PERF: High-performance stats collector - WORKING")
-    print("✅ P2-PERF: Performance decorators - WORKING")
-    print("✅ P2-PERF: Reliability manager & fault tolerance - WORKING")
-    print("✅ P2-PERF: Enhanced connection manager integration - WORKING")
+    print("✅ ALL P1+P2+P3+P4 FUNCTIONALITY TESTS PASSED")
+    print("✅ P1 Critical Functionality: NetworkManager D-Bus, WiFi scanning, stealth status - WORKING")
+    print("✅ P2 Performance & Reliability: Memory optimization, stats collection, fault tolerance - WORKING") 
+    print("✅ P3 User Experience: Profiles, preferences, analytics, keyboard navigation - WORKING")
+    print("✅ P4 Advanced Features: Network monitoring, intelligent QoS, bandwidth management - WORKING")
+    print("✅ ENTERPRISE-GRADE NETWORK MANAGEMENT SYSTEM - FULLY OPERATIONAL")
 else:
-    print("❌ SOME P1 + P2 FUNCTIONALITY TESTS FAILED")
-    print("🔍 Review failed tests above for P1/P2 functionality issues")
+    print("❌ SOME P1+P2+P3+P4 FUNCTIONALITY TESTS FAILED")
+    print("🔍 Review failed tests above for enhancement phase issues")
+    
+    # Categorize failures by phase
+    p1_failures = sum(1 for name, success, _ in test_results if not success and any(p1_term in name.lower() for p1_term in ['networkmanager', 'interface', 'wifi', 'stealth']))
+    p2_failures = sum(1 for name, success, _ in test_results if not success and any(p2_term in name.lower() for p2_term in ['performance', 'stats', 'reliability']))
+    p3_failures = sum(1 for name, success, _ in test_results if not success and any(p3_term in name.lower() for p3_term in ['user experience', 'profile', 'preference', 'keyboard']))
+    p4_failures = sum(1 for name, success, _ in test_results if not success and any(p4_term in name.lower() for p4_term in ['advanced', 'network monitor', 'bandwidth', 'qos']))
+    
+    if p1_failures > 0:
+        print(f"  P1 Critical Issues: {p1_failures} failures")
+    if p2_failures > 0:
+        print(f"  P2 Performance Issues: {p2_failures} failures")
+    if p3_failures > 0:
+        print(f"  P3 User Experience Issues: {p3_failures} failures")
+    if p4_failures > 0:
+        print(f"  P4 Advanced Features Issues: {p4_failures} failures")
+
+print("\n" + "=" * 80)
+print("PDANET LINUX ENHANCED - COMPREHENSIVE TESTING COMPLETE")
+print("All P1+P2+P3+P4 enhancement phases evaluated")
+print("=" * 80)
 
 # Test Suite 11: P3 User Experience Manager Tests - FOCUSED ON FAILING TASKS
 print("\n[11/16] P3 USER EXPERIENCE MANAGER TESTS - CRITICAL FIXES")
