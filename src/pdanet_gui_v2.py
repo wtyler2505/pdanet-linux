@@ -1986,6 +1986,52 @@ class PdaNetGUI(Gtk.Window):
             self.logger.error(f"Failed to open settings dialog: {e}")
             self._show_error("Settings Error", f"Failed to open settings: {str(e)}")
     
+    def show_data_dashboard_window(self):
+        """Show Data Usage Dashboard in a separate window"""
+        try:
+            # Create a new window for the dashboard
+            dashboard_window = Gtk.Window()
+            dashboard_window.set_title("PdaNet Linux - Data Usage Dashboard")
+            dashboard_window.set_default_size(800, 600)
+            dashboard_window.set_transient_for(self)
+            dashboard_window.set_modal(False)
+            dashboard_window.set_type_hint(Gdk.WindowTypeHint.DIALOG)
+            
+            # Create dashboard instance
+            dashboard = DataUsageDashboard(
+                stats_collector=self.stats,
+                connection_manager=self.connection
+            )
+            
+            # Add dashboard to window with padding
+            container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+            container.set_margin_left(10)
+            container.set_margin_right(10)
+            container.set_margin_top(10)
+            container.set_margin_bottom(10)
+            container.pack_start(dashboard, True, True, 0)
+            
+            # Add close button
+            button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+            button_box.set_halign(Gtk.Align.END)
+            
+            close_button = Gtk.Button(label="Close")
+            close_button.connect("clicked", lambda b: dashboard_window.destroy())
+            close_button.get_style_context().add_class("button")
+            button_box.pack_start(close_button, False, False, 0)
+            
+            container.pack_start(button_box, False, False, 0)
+            dashboard_window.add(container)
+            
+            # Show window
+            dashboard_window.show_all()
+            
+            self.logger.info("Data Usage Dashboard window opened")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to open data dashboard window: {e}")
+            self._show_error("Dashboard Error", f"Failed to open dashboard: {str(e)}")
+    
     def reload_settings(self):
         """Reload settings after configuration changes"""
         # Reload config
