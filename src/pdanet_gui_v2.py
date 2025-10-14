@@ -1022,6 +1022,11 @@ class PdaNetGUI(Gtk.Window):
         settings_dialog_item.connect("activate", lambda x: self.on_settings_clicked(None))
         settings_submenu.append(settings_dialog_item)
 
+        # Show Data Usage Dashboard
+        dashboard_item = Gtk.MenuItem(label="Data Usage Dashboard...")
+        dashboard_item.connect("activate", lambda x: self.show_data_dashboard_window())
+        settings_submenu.append(dashboard_item)
+
         # Refresh/rescan
         refresh_item = Gtk.MenuItem(label="Refresh Status")
         refresh_item.connect("activate", lambda x: self.update_display())
