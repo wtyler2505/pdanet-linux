@@ -13,7 +13,7 @@ import sqlite3
 import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass
 
 import numpy as np
