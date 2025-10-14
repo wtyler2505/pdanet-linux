@@ -2774,6 +2774,43 @@ class PdaNetGUI(Gtk.Window):
 
         GLib.idle_add(show_error)
 
+    def on_error_recovery_needed(self, error_info):
+        """Callback for enhanced error recovery"""
+        def show_recovery_dialog():
+            try:
+                # Show enhanced error recovery dialog
+                dialog = ErrorRecoveryDialog(
+                    parent=self,
+                    error_info=error_info
+                )
+                response = dialog.run()
+                
+                if response == Gtk.ResponseType.YES:  # Auto-fix attempted
+                    self.show_notification(
+                        "Auto-fix Applied", 
+                        f"Attempting to fix: {error_info.get('code', 'unknown error')}",
+                        "info"
+                    )
+                elif response == Gtk.ResponseType.APPLY:  # Manual steps chosen
+                    self.show_notification(
+                        "Manual Fix Selected",
+                        "Follow the provided steps to resolve the issue",
+                        "info"
+                    )
+                
+                dialog.destroy()
+                
+            except Exception as e:
+                self.logger.error(f"Error recovery dialog failed: {e}")
+                # Fallback to simple error notification
+                self.show_notification(
+                    "Connection Error", 
+                    error_info.get('message', 'Unknown error'),
+                    "critical"
+                )
+        
+        GLib.idle_add(show_recovery_dialog)
+
     def on_quit(self, widget):
         """Quit application"""
         self.logger.info("Shutting down...")
