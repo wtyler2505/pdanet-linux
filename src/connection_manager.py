@@ -1218,6 +1218,170 @@ class ConnectionManager:
                 
             elif required_action == "start_speed_test":
                 # This would start a speed test
+    # ------------------------------------------------------------------
+    # Advanced Features Integration (P4-ADV)
+    # ------------------------------------------------------------------
+    
+    def start_advanced_monitoring(self):
+        """Start advanced network monitoring and traffic analysis"""
+        if self.current_interface:
+            self.network_monitor.start_monitoring(self.current_interface)
+            self.logger.info(f"Advanced monitoring started on {self.current_interface}")
+    
+    def stop_advanced_monitoring(self):
+        """Stop advanced network monitoring"""
+        self.network_monitor.stop_monitoring()
+        self.logger.info("Advanced monitoring stopped")
+    
+    def enable_intelligent_qos(self) -> bool:
+        """Enable intelligent Quality of Service"""
+        if not self.current_interface:
+            self.logger.warning("No interface available for QoS")
+            return False
+            
+        success = self.bandwidth_manager.enable_qos(self.current_interface)
+        if success:
+            self.logger.info("Intelligent QoS enabled")
+            # Start monitoring for better QoS decisions
+            self.start_advanced_monitoring()
+        
+        return success
+    
+    def disable_intelligent_qos(self) -> bool:
+        """Disable intelligent Quality of Service"""
+        success = self.bandwidth_manager.disable_qos()
+        if success:
+            self.logger.info("Intelligent QoS disabled")
+        return success
+    
+    def get_advanced_status(self) -> Dict[str, Any]:
+        """Get comprehensive status including all P1+P2+P3+P4 features"""
+        try:
+            # Get base status with P1+P2+P3
+            status = self.get_enhanced_status_with_ux()
+            
+            # Add P4 advanced features
+            try:
+                traffic_analysis = self.network_monitor.get_traffic_analysis()
+                bandwidth_report = self.network_monitor.get_bandwidth_report()
+                security_report = self.network_monitor.get_security_report()
+                qos_status = self.bandwidth_manager.get_qos_status()
+                classification_report = self.bandwidth_manager.get_traffic_classification_report()
+            except Exception as e:
+                self.logger.warning(f"Error getting P4 metrics: {e}")
+                traffic_analysis = {"status": "error"}
+                bandwidth_report = {"total_bytes": 0}
+                security_report = {"status": "error"}
+                qos_status = {"qos_enabled": False}
+                classification_report = {"total_classifiers": 0}
+            
+            status.update({
+                "advanced_features": {
+                    "network_monitoring": {
+                        "enabled": self.network_monitor.monitoring_active,
+                        "traffic_analysis": traffic_analysis,
+                        "bandwidth_report": bandwidth_report,
+                        "security_report": security_report
+                    },
+                    "intelligent_qos": {
+                        "status": qos_status,
+                        "classification": classification_report,
+                        "bandwidth_limits": len(self.bandwidth_manager.bandwidth_limits),
+                        "traffic_rules": len(self.bandwidth_manager.traffic_rules)
+                    }
+                },
+                "feature_summary": {
+                    "p1_critical_functionality": "active",
+                    "p2_performance_optimization": "active", 
+                    "p3_user_experience": "active",
+                    "p4_advanced_features": "active"
+                }
+            })
+            
+            return status
+            
+        except Exception as e:
+            self.logger.error(f"Error getting advanced status: {e}")
+            # Fallback to enhanced status
+            try:
+                return self.get_enhanced_status_with_ux()
+            except Exception as e2:
+                self.logger.error(f"Error getting enhanced status: {e2}")
+                return {"state": self.state.value, "error": str(e)}
+    
+    def create_bandwidth_profile(self, name: str, download_limit_kbps: int, 
+                                upload_limit_kbps: int, applications: List[str] = None) -> bool:
+        """Create intelligent bandwidth management profile"""
+        try:
+            from intelligent_bandwidth_manager import QoSPriority
+            
+            # Determine priority based on limits
+            if download_limit_kbps > 50000:  # > 50Mbps
+                priority = QoSPriority.HIGH
+            elif download_limit_kbps > 10000:  # > 10Mbps  
+                priority = QoSPriority.NORMAL
+            else:
+                priority = QoSPriority.LOW
+            
+            success = self.bandwidth_manager.create_bandwidth_limit(
+                name=name,
+                download_kbps=download_limit_kbps,
+                upload_kbps=upload_limit_kbps,
+                priority=priority,
+                applications=applications or []
+            )
+            
+            if success:
+                self.logger.info(f"Created bandwidth profile: {name}")
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Failed to create bandwidth profile: {e}")
+            return False
+    
+    def export_comprehensive_logs(self, filepath: Path, hours: int = 24) -> bool:
+        """Export comprehensive logs including all P1+P2+P3+P4 data"""
+        try:
+            export_data = {
+                "export_info": {
+                    "timestamp": datetime.now().isoformat(),
+                    "hours_covered": hours,
+                    "pdanet_version": "2.0-P4-Enhanced"
+                },
+                "connection_status": self.get_advanced_status(),
+                "performance_data": self.resource_manager.get_resource_summary(),
+                "reliability_data": self.reliability_manager.get_reliability_summary(),
+                "user_experience_data": {
+                    "profiles": len(self.ux_manager.user_profiles),
+                    "usage_insights": self.ux_manager.get_usage_insights()
+                }
+            }
+            
+            # Add P4 advanced data
+            if self.network_monitor.monitoring_active:
+                export_data["network_monitoring"] = {
+                    "traffic_flows": len(self.network_monitor.network_flows),
+                    "security_events": len(self.network_monitor.security_events)
+                }
+            
+            if self.bandwidth_manager.qos_enabled:
+                export_data["qos_data"] = self.bandwidth_manager.get_qos_status()
+            
+            with open(filepath, 'w') as f:
+                json.dump(export_data, f, indent=2, default=str)
+            
+            # Also export detailed traffic logs if monitoring is active
+            if self.network_monitor.monitoring_active:
+                traffic_log_path = filepath.with_suffix('.traffic.json')
+                self.network_monitor.export_traffic_log(traffic_log_path, hours)
+            
+            self.logger.info(f"Comprehensive logs exported to {filepath}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to export comprehensive logs: {e}")
+            return False
                 result["speed_test_started"] = True
                 
         return result
