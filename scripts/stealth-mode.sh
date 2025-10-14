@@ -38,21 +38,21 @@ enable_stealth() {
     # Many carriers detect tethering by seeing Windows/Mac update traffic
     # Block these ports to prevent detection
 
-    # Windows Update (port 80, 443 with specific IPs would be better, but we'll use a simple approach)
-    # Block common Windows Update domains by blocking specific port combinations
-
-    # Drop Windows Update traffic (helps avoid detection)
+    # IMPORTANT NOTE: String matching on HTTPS traffic (port 443) is INEFFECTIVE because
+    # the traffic is encrypted. The following rules only work for unencrypted HTTP (port 80).
+    # For proper domain blocking, use DNS-based methods or a hosts file approach.
+    
+    # Block HTTP (port 80) traffic to common update domains
+    # This only catches unencrypted update checks (most modern systems use HTTPS)
     iptables -A OUTPUT -p tcp --dport 80 -m string --string "windowsupdate.com" --algo bm -j DROP 2>/dev/null || true
-    iptables -A OUTPUT -p tcp --dport 443 -m string --string "windowsupdate.com" --algo bm -j DROP 2>/dev/null || true
-
-    # Block Microsoft telemetry
-    iptables -A OUTPUT -p tcp --dport 443 -m string --string "telemetry.microsoft.com" --algo bm -j DROP 2>/dev/null || true
-
-    # Block Mac App Store updates (port 80/443)
-    iptables -A OUTPUT -p tcp --dport 80 -m string --string "apple.com" --algo bm -j DROP 2>/dev/null || true
-
-    # Note: The above string matching rules may not work in all cases due to HTTPS encryption
-    # A more robust solution would use a transparent proxy with SSL inspection (complex)
+    
+    # REMOVED: HTTPS string matching (lines 46, 49) - completely ineffective due to encryption
+    # For HTTPS blocking, use DNS redirection instead (see wifi-stealth.sh DNS layer)
+    
+    # Note: For robust update/telemetry blocking, implement DNS-based blocking:
+    # 1. Redirect DNS queries to local resolver
+    # 2. Block update domains in /etc/hosts or dnsmasq
+    # 3. Use SNI inspection (requires specialized tools)
 
     echo "✓ Stealth mode enabled"
     echo ""
