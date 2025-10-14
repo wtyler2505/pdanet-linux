@@ -1616,18 +1616,10 @@ class PdaNetGUI(Gtk.Window):
                 
                 if response == Gtk.ResponseType.OK:
                     # Wizard completed successfully
-                    wizard_data = wizard.get_wizard_data()
+                    self.logger.info("First-run wizard completed successfully")
                     
-                    # Apply wizard settings
-                    if wizard_data.get('auto_connect'):
-                        self.config.set("auto_reconnect", True)
-                        self.connection.enable_auto_reconnect(True)
-                    
-                    if wizard_data.get('enable_notifications'):
-                        self.config.set("notifications_enabled", True)
-                    
-                    if wizard_data.get('preferred_mode'):
-                        self.config.set("default_connection_mode", wizard_data['preferred_mode'])
+                    # Mark first run as complete
+                    self.config.set("first_run", False)
                     
                     self.logger.info("First run wizard completed")
                     self.show_notification(
