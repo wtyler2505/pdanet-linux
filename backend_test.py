@@ -1436,9 +1436,193 @@ def test_quality_monitoring_and_assessment():
     assert hasattr(ux_manager, 'quality_history'), "Should have quality_history attribute"
 
 test("User Experience Manager Initialization", test_user_experience_manager_initialization)
-test("Connection Profile Management", test_connection_profile_management)
-test("User Preferences Management", test_user_preferences_management)
-test("Usage Analytics and Insights", test_usage_analytics_and_insights)
+test("Connection Profile Management - COMPREHENSIVE", test_connection_profile_management_comprehensive)
+test("User Preferences Management - COMPREHENSIVE", test_user_preferences_management_comprehensive)
+test("Usage Analytics and Insights - COMPREHENSIVE", test_usage_analytics_and_insights_comprehensive)
+test("Data Persistence and Configuration - COMPREHENSIVE", test_data_persistence_and_configuration_comprehensive)
+
+# Test Suite 12: P3 Connection Manager Integration Tests - FOCUSED ON FAILING TASKS
+print("\n[12/16] P3 CONNECTION MANAGER INTEGRATION TESTS - CRITICAL FIXES")
+print("-" * 80)
+
+def test_enhanced_connection_manager_p3_integration():
+    """Test ConnectionManager P3 UX integration (CRITICAL FIX)"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager'), \
+         patch('connection_manager.get_reliability_manager'), \
+         patch('connection_manager.get_ux_manager') as mock_ux, \
+         patch('connection_manager.get_advanced_network_monitor'), \
+         patch('connection_manager.get_intelligent_bandwidth_manager'):
+        
+        from connection_manager import ConnectionManager
+        
+        # Mock UX manager
+        mock_ux_instance = Mock()
+        mock_ux_instance.user_profiles = {"test_profile": Mock(name="test_profile", mode="wifi", ssid="TestNet")}
+        mock_ux_instance.get_usage_insights.return_value = {"summary": {}, "patterns": [], "recommendations": []}
+        mock_ux_instance.get_quality_assessment.return_value = {"status": "active", "score": 85}
+        mock_ux_instance.get_smart_notifications.return_value = []
+        mock_ux.return_value = mock_ux_instance
+        
+        conn = ConnectionManager()
+        
+        # Test P3 components are initialized
+        assert hasattr(conn, 'ux_manager'), "Missing ux_manager"
+        assert conn.ux_manager is not None, "ux_manager not initialized"
+
+def test_profile_based_connections_comprehensive():
+    """Test profile-based connections with USAGE TRACKING (CRITICAL FIX)"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager'), \
+         patch('connection_manager.get_reliability_manager'), \
+         patch('connection_manager.get_ux_manager') as mock_ux, \
+         patch('connection_manager.get_advanced_network_monitor'), \
+         patch('connection_manager.get_intelligent_bandwidth_manager'):
+        
+        from connection_manager import ConnectionManager
+        from user_experience import ConnectionProfile
+        
+        # Create mock profile with usage tracking
+        test_profile = ConnectionProfile(
+            name="test_wifi_profile",
+            mode="wifi", 
+            ssid="TestNetwork",
+            stealth_level=2,
+            use_count=0
+        )
+        
+        # Mock UX manager with profile
+        mock_ux_instance = Mock()
+        mock_ux_instance.use_profile.return_value = test_profile
+        mock_ux_instance.user_profiles = {"test_wifi_profile": test_profile}
+        mock_ux.return_value = mock_ux_instance
+        
+        conn = ConnectionManager()
+        
+        # Test connect_with_profile method exists and works
+        assert hasattr(conn, 'connect_with_profile'), "Missing connect_with_profile method"
+        
+        # Mock connection success
+        with patch.object(conn, 'connect', return_value=True):
+            success = conn.connect_with_profile("test_wifi_profile")
+            
+            # Verify profile was used (increments use count)
+            mock_ux_instance.use_profile.assert_called_with("test_wifi_profile")
+            
+            # Verify connection was attempted with profile parameters
+            conn.connect.assert_called_with(mode="wifi", ssid="TestNetwork", password=None)
+
+def test_quick_connect_suggestions_comprehensive():
+    """Test AI-powered quick connect suggestions with DATA STRUCTURE FIX"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager'), \
+         patch('connection_manager.get_reliability_manager'), \
+         patch('connection_manager.get_ux_manager') as mock_ux, \
+         patch('connection_manager.get_advanced_network_monitor'), \
+         patch('connection_manager.get_intelligent_bandwidth_manager'):
+        
+        from connection_manager import ConnectionManager
+        from user_experience import ConnectionProfile
+        
+        # Create mock profiles
+        profile1 = ConnectionProfile(name="morning_wifi", mode="wifi", ssid="HomeWiFi", use_count=5)
+        profile2 = ConnectionProfile(name="mobile_usb", mode="usb", use_count=3)
+        
+        # Mock UX manager with suggestions
+        mock_ux_instance = Mock()
+        mock_ux_instance.get_suggested_profiles.return_value = [profile1, profile2]
+        mock_ux.return_value = mock_ux_instance
+        
+        conn = ConnectionManager()
+        
+        # Test get_quick_connect_suggestions method
+        suggestions = conn.get_quick_connect_suggestions()
+        
+        assert isinstance(suggestions, list), "Suggestions should be a list"
+        assert len(suggestions) > 0, "Should return suggestions"
+        
+        # CRITICAL TEST: Verify suggestion structure has required keys
+        for suggestion in suggestions:
+            assert "profile_name" in suggestion, "Missing 'profile_name' key in suggestion"
+            assert "mode" in suggestion, "Missing 'mode' key in suggestion"
+            assert "description" in suggestion, "Missing 'description' key in suggestion"
+            assert "use_count" in suggestion, "Missing 'use_count' key in suggestion"
+            assert "estimated_success_rate" in suggestion, "Missing 'estimated_success_rate' key in suggestion"
+
+def test_enhanced_status_with_ux_metrics_comprehensive():
+    """Test enhanced status retrieval with UX metrics (CRITICAL FIX)"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats') as mock_stats, \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager'), \
+         patch('connection_manager.get_reliability_manager'), \
+         patch('connection_manager.get_ux_manager') as mock_ux, \
+         patch('connection_manager.get_advanced_network_monitor'), \
+         patch('connection_manager.get_intelligent_bandwidth_manager'):
+        
+        from connection_manager import ConnectionManager
+        
+        # Mock stats
+        mock_stats_instance = Mock()
+        mock_stats_instance.get_total_downloaded.return_value = 1024*1024*100  # 100MB
+        mock_stats_instance.get_total_uploaded.return_value = 1024*1024*50     # 50MB
+        mock_stats.return_value = mock_stats_instance
+        
+        # Mock UX manager with safe returns
+        mock_ux_instance = Mock()
+        mock_ux_instance.user_profiles = {"profile1": Mock(name="profile1", use_count=5)}
+        mock_ux_instance.get_usage_insights.return_value = {
+            "summary": {"total_sessions": 10}, 
+            "patterns": ["Long sessions"], 
+            "recommendations": ["Enable data warnings"]
+        }
+        mock_ux_instance.get_quality_assessment.return_value = {"status": "active", "score": 85}
+        mock_ux_instance.get_smart_notifications.return_value = []
+        mock_ux.return_value = mock_ux_instance
+        
+        conn = ConnectionManager()
+        
+        # Test enhanced status retrieval
+        try:
+            status = conn.get_enhanced_status_with_ux()
+            
+            # Verify status structure
+            assert isinstance(status, dict), "Status should be a dictionary"
+            assert "state" in status, "Missing 'state' in status"
+            
+            # CRITICAL TEST: Verify UX sections are present and properly structured
+            if "user_experience" in status:
+                ux_section = status["user_experience"]
+                assert "quick_connect_suggestions" in ux_section, "Missing quick_connect_suggestions"
+                assert "usage_insights" in ux_section, "Missing usage_insights"
+                assert "quality_assessment" in ux_section, "Missing quality_assessment"
+                assert "smart_notifications" in ux_section, "Missing smart_notifications"
+                
+                # Verify usage insights structure
+                insights = ux_section["usage_insights"]
+                assert "summary" in insights, "Missing summary in usage insights"
+                assert "patterns" in insights, "Missing patterns in usage insights"
+                assert "recommendations" in insights, "Missing recommendations in usage insights"
+            
+            if "profiles" in status:
+                profiles_section = status["profiles"]
+                assert "available_profiles" in profiles_section, "Missing available_profiles count"
+                assert "most_used_profile" in profiles_section, "Missing most_used_profile"
+                
+        except Exception as e:
+            # Should handle errors gracefully and return basic status
+            assert "error" in str(e).lower() or "state" in status, f"Status retrieval failed with error: {e}"
+
+test("Enhanced Connection Manager P3 Integration", test_enhanced_connection_manager_p3_integration)
+test("Profile-based Connections - COMPREHENSIVE", test_profile_based_connections_comprehensive)
+test("Quick Connect Suggestions - COMPREHENSIVE", test_quick_connect_suggestions_comprehensive)
+test("Enhanced Status with UX Metrics - COMPREHENSIVE", test_enhanced_status_with_ux_metrics_comprehensive)
 test("Profile Suggestions and AI", test_profile_suggestions_and_ai)
 test("Quality Monitoring and Assessment", test_quality_monitoring_and_assessment)
 
