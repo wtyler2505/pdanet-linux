@@ -799,9 +799,11 @@ class ConnectionManager:
             # SECURITY FIX: Use dynamically found script path
             script = self.disconnect_script
             if not script:
-                self.last_error = "Disconnect script not found"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
+                self._handle_error_with_code(
+                    "disconnect_script_not_found",
+                    "Disconnect script not found",
+                    {"expected_script": "disconnect_script"}
+                )
                 return
 
             result = self._run_privileged([script], timeout=15)
