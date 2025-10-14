@@ -83,6 +83,73 @@ In-depth technical debt and refactoring opportunities:
 
 ---
 
+### 6. [DEPENDENCY_AND_CONFIG_ANALYSIS.md](./DEPENDENCY_AND_CONFIG_ANALYSIS.md) 📦 **Dependencies**
+Security vulnerabilities and configuration analysis:
+- **115 dependencies** analyzed
+- **4 security vulnerabilities** found (2 fixable now)
+- **~17% unused dependencies** identified
+- **Config security** assessment
+
+**Critical Findings:**
+- ⚠️ pymongo CVE-2024-5629 (HIGH) - Upgrade to 4.6.3
+- ⚠️ starlette CVE-2024-47874 (MEDIUM) - Upgrade to 0.47.2
+- ⚠️ pip CVE-2025-8869 (CRITICAL) - Wait for 25.3
+- ⚠️ ecdsa CVE-2024-23342 (HIGH) - Unfixable but unused
+
+**Unused Dependencies to Remove:**
+- FastAPI, uvicorn, starlette
+- pymongo, motor (MongoDB)
+- boto3, botocore (AWS)
+- pandas (data analysis)
+
+**Dependency Health:** 7.5/10 → 9.0/10 (after cleanup)
+
+---
+
+### 7. [TEST_SUITE_ANALYSIS.md](./TEST_SUITE_ANALYSIS.md) 🧪 **Testing**
+Comprehensive test suite analysis:
+- **193 tests** across 19 files
+- **7,019 lines** of test code
+- **~75% coverage** (estimated)
+- **2 collection errors** (visual tests broken)
+
+**Coverage by Module:**
+- Core modules: 75% ✅
+- P2 modules: 30% ⚠️
+- P3 modules: 5% ❌
+- P4 modules: 5% ❌
+- GUI: 40% ⚠️
+
+**Critical Gaps:**
+- ❌ No integration tests (all mocked)
+- ❌ No stress/load tests
+- ❌ P2-P4 modules barely tested
+- ❌ iPhone bypass minimally tested
+- ❌ Visual regression tests broken
+
+**Test Quality:** 7.5/10 → 9.5/10 (after improvements)
+
+---
+
+## 📚 AUDIT DOCUMENTS
+
+### 1. [COMPREHENSIVE_AUDIT_2025.md](./COMPREHENSIVE_AUDIT_2025.md) ⭐ **Start Here**
+Complete audit report covering
+- pdanet_gui_v2.py is too large (1,686 lines)
+- Code duplication in connection methods
+- 150+ magic numbers need constants
+- Inconsistent error handling patterns
+- Missing configuration validation
+
+**Refactoring Roadmap:**
+- Phase 1: Critical (28 hours) - High ROI
+- Phase 2: Important (40 hours) - Medium ROI
+- Phase 3: Nice to Have (40 hours) - Low ROI
+
+**Technical Debt Score:** 7.2/10 → 9.0/10 (after Phase 1-2)
+
+---
+
 ## 📊 EXECUTIVE SUMMARY
 
 ### Overall Scores
