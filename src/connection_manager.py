@@ -683,11 +683,11 @@ class ConnectionManager:
 
                     # Step 2: Validate proxy
                     if not self.validate_proxy():
-                        error_msg = "Proxy not accessible"
-                        self.last_error = error_msg
-                        self._set_state(ConnectionState.ERROR)
-                        self._notify_error(error_msg)
-                        self.reliability_manager.report_failure("proxy_validation", error_msg, interface)
+                        self._handle_error_with_code(
+                            "proxy_not_accessible",
+                            "Proxy not accessible",
+                            {"mode": mode, "interface": interface}
+                        )
                         return
 
                 # Step 2b: For iPhone/WiFi mode, validate SSID
