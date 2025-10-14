@@ -27,6 +27,7 @@ from reliability_manager import get_reliability_manager
 from user_experience import get_ux_manager
 from advanced_network_monitor import get_advanced_network_monitor
 from intelligent_bandwidth_manager import get_intelligent_bandwidth_manager
+from iphone_hotspot_bypass import get_iphone_hotspot_bypass
 from input_validators import (
     ValidationError,
     validate_ssid,
