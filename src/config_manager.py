@@ -83,6 +83,9 @@ class ConfigManager:
         self.profiles_file = self.config_dir / "profiles.json"
         self.state_file = self.config_dir / "state.json"
         self.wifi_networks_file = self.config_dir / "wifi_networks.json"
+        
+        # Initialize config validator
+        self.validator = ConfigValidator(self.config_file)
 
         # Default configuration
         self.defaults = {
