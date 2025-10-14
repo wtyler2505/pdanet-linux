@@ -128,7 +128,7 @@ class ConnectionManager:
         self.resource_manager.start_monitoring(interval=60)
         self.reliability_manager.start_monitoring()
 
-    def _run_privileged(self, argv, timeout=60):
+    def _run_privileged(self, argv, timeout=60, env=None):
         """
         Run a privileged command using PolicyKit (pkexec).
         SECURITY FIX: Audit Issue #55, #293
@@ -166,12 +166,19 @@ class ConnectionManager:
         
         try:
             cmd = [pkexec_path] + argv
+            
+            # Prepare environment
+            run_env = os.environ.copy()
+            if env:
+                run_env.update(env)
+            
             result = subprocess.run(
                 cmd,
                 check=False,
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
+                env=run_env
             )
             
             # Log privileged operation for audit trail (Issue #300-303)
