@@ -1028,7 +1028,8 @@ class ConnectionManager:
         self.logger.info(f"Connecting with profile: {profile.name}")
         
         # Record connection attempt for analytics
-        start_time = time.time()
+        session_start_time = time.time()
+        self._session_start_time = session_start_time
         
         try:
             success = self.connect(
