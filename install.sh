@@ -13,7 +13,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;36m'
 NC='\033[0m' # No Color
 
-PROJECT_DIR="/home/wtyler/pdanet-linux"
+# Dynamically detect project directory (portable across systems)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PROJECT_DIR="$SCRIPT_DIR"
 
 echo -e "${BLUE}"
 echo "╔════════════════════════════════════════╗"
