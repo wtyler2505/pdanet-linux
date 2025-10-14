@@ -982,6 +982,9 @@ class ConnectionManager:
         if not self.stealth_active:
             return "DISABLED"
         
+        level_names = {1: "BASIC", 2: "MODERATE", 3: "AGGRESSIVE"}
+        return f"ACTIVE (L{self.stealth_level}: {level_names.get(self.stealth_level, 'UNKNOWN')})"
+    
     def get_comprehensive_status(self) -> Dict[str, Any]:
         """
         Get comprehensive system status including performance and reliability metrics
@@ -1003,8 +1006,6 @@ class ConnectionManager:
             base_status['network_health'] = self.reliability_manager.check_connection_health().value
         
         return base_status
-        level_names = {1: "BASIC", 2: "MODERATE", 3: "AGGRESSIVE"}
-        return f"ACTIVE (L{self.stealth_level}: {level_names.get(self.stealth_level, 'UNKNOWN')})"
 
     def _handle_disconnect_and_reconnect(self):
         """Handle unexpected disconnect and attempt reconnection"""
