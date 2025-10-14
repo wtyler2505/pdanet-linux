@@ -2959,7 +2959,9 @@ class PdaNetGUI(Gtk.Window):
                 # Show enhanced error recovery dialog
                 dialog = ErrorRecoveryDialog(
                     parent=self,
-                    error_info=error_info
+                    error_code=error_info.get('code', 'UNKNOWN_ERROR'),
+                    error_message=error_info.get('message', ''),
+                    details=error_info.get('details', '')
                 )
                 response = dialog.run()
                 
