@@ -816,15 +816,19 @@ class ConnectionManager:
                 self.stats.stop_session()
 
             else:
-                self.last_error = f"Disconnect script failed: {result.stderr}"
-                self._set_state(ConnectionState.ERROR)
-                self._notify_error(self.last_error)
-                self.logger.error(self.last_error)
+                self._handle_error_with_code(
+                    "disconnect_script_failed",
+                    f"Disconnect script failed: {result.stderr}",
+                    {"script": script, "returncode": result.returncode, "stderr": result.stderr}
+                )
+                self.logger.error(f"Disconnect script failed: {result.stderr}")
 
         except Exception as e:
-            self.last_error = str(e)
-            self._set_state(ConnectionState.ERROR)
-            self._notify_error(self.last_error)
+            self._handle_error_with_code(
+                "disconnect_exception",
+                f"Disconnection failed: {e}",
+                {"exception_type": type(e).__name__, "exception_details": str(e)}
+            )
             self.logger.error(f"Disconnection failed: {e}")
 
     def start_monitoring(self):
