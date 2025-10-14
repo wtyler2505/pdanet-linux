@@ -5,6 +5,7 @@ SECURITY HARDENED VERSION
 """
 
 import ipaddress
+import json
 import os
 import re
 import shutil
