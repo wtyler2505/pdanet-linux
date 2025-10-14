@@ -1536,9 +1536,13 @@ class PdaNetGUI(Gtk.Window):
 
         # Info label
         if mode == "iphone":
-            info_text = "Enter your iPhone Personal Hotspot details:"
+            info_text = "🍎 iPhone Personal Hotspot Connection:\n" \
+                       "• Enhanced carrier detection bypass\n" \
+                       "• 10-layer stealth system active\n" \
+                       "• Traffic pattern mimicking enabled\n\n" \
+                       "Enter iPhone hotspot details:"
         else:
-            info_text = "Enter Android WiFi Hotspot details:"
+            info_text = "📱 Android WiFi Hotspot details:"
 
         info_label = Gtk.Label(label=info_text)
         box.pack_start(info_label, False, False, 0)
