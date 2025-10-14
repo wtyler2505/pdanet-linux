@@ -62,6 +62,9 @@ from logger import get_logger
 from stats_collector import get_stats
 from theme import Colors, Format, get_css
 from dialogs.settings_dialog import SettingsDialog
+from dialogs.first_run_wizard import FirstRunWizard
+from dialogs.error_recovery_dialog import ErrorRecoveryDialog
+from widgets.data_dashboard import DataUsageDashboard
 
 
 class SingleInstance:
