@@ -1837,6 +1837,55 @@ class PdaNetGUI(Gtk.Window):
 
     def on_settings_clicked(self, button):
         """Open settings dialog"""
+        try:
+            dialog = SettingsDialog(self)
+            dialog.run()
+            dialog.destroy()
+            
+            # Reload settings after dialog closes
+            self.reload_settings()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to open settings dialog: {e}")
+            self._show_error("Settings Error", f"Failed to open settings: {str(e)}")
+    
+    def reload_settings(self):
+        """Reload settings after configuration changes"""
+        # Reload config
+        self.config = get_config()
+        
+        # Update GUI update interval
+        update_interval = self.config.get("update_interval_ms", 1000)
+        # Note: Changing timeout requires restart of the update loop
+        # For now, user should restart app for this to take effect
+        
+        # Update auto-reconnect switch
+        auto_reconnect = self.config.get("auto_reconnect", True)
+        self.reconnect_switch.set_active(auto_reconnect)
+        
+        # Update autostart switch
+        autostart = self.config.is_autostart_enabled()
+        self.autostart_switch.set_active(autostart)
+        
+        self.logger.info("Settings reloaded")
+    
+    def _show_error(self, title: str, message: str):
+        """Show error dialog"""
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=0,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.OK,
+            text=title
+        )
+        dialog.format_secondary_text(message)
+        dialog.run()
+        dialog.destroy()
+    
+    # Old settings dialog implementation removed - replaced with SettingsDialog class
+    # The following stub method is kept for compatibility
+    def _old_on_settings_clicked_REMOVED(self, button):
+        """[REMOVED] Old settings dialog - replaced with new SettingsDialog"""
         dialog = Gtk.Dialog(title="Settings", parent=self, flags=Gtk.DialogFlags.MODAL)
         dialog.add_buttons(
             "Import", Gtk.ResponseType.APPLY,
