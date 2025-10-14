@@ -361,7 +361,10 @@ def test_script_not_found_error_recovery():
         # Mock script not found
         conn.connect_script = None  # Simulate script not found
         
-        conn._connect_thread("usb")
+        # Mock interface detection and proxy validation to succeed so we get to script check
+        with patch.object(conn, 'detect_interface', return_value="usb0"):
+            with patch.object(conn, 'validate_proxy', return_value=True):
+                conn._connect_thread("usb")
         
         # Verify error was handled with correct code
         error_info = conn.get_last_error_info()
