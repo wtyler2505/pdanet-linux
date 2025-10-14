@@ -239,6 +239,9 @@ class PdaNetGUI(Gtk.Window):
 
         # Load settings
         self.load_settings()
+        
+        # Check for first run and show wizard if needed
+        self.check_first_run()
 
         # Start minimized if requested
         if start_minimized:
