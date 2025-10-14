@@ -692,11 +692,11 @@ class ConnectionManager:
 
                 # Step 2b: For iPhone/WiFi mode, validate SSID
                 if mode in ["iphone", "wifi"] and not ssid:
-                    error_msg = f"SSID required for {mode} mode"
-                    self.last_error = error_msg
-                    self._set_state(ConnectionState.ERROR)
-                    self._notify_error(error_msg)
-                    self.reliability_manager.report_failure("missing_ssid", error_msg)
+                    self._handle_error_with_code(
+                        "missing_ssid",
+                        f"SSID required for {mode} mode",
+                        {"mode": mode}
+                    )
                     return
 
                 # Step 3: Run connect script
