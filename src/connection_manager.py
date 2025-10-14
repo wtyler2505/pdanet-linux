@@ -1121,30 +1121,63 @@ class ConnectionManager:
     
     def get_enhanced_status_with_ux(self) -> Dict[str, Any]:
         """Get comprehensive status including UX metrics and suggestions"""
-        status = self.get_comprehensive_status()
-        
-        # Add UX enhancements
-        status.update({
-            "user_experience": {
-                "quick_connect_suggestions": self.get_quick_connect_suggestions(),
-                "usage_insights": self.ux_manager.get_usage_insights(),
-                "quality_assessment": self.ux_manager.get_quality_assessment(),
-                "smart_notifications": self.ux_manager.get_smart_notifications(
+        try:
+            status = self.get_comprehensive_status()
+            
+            # Safely get UX metrics
+            try:
+                quick_suggestions = self.get_quick_connect_suggestions()
+                usage_insights = self.ux_manager.get_usage_insights()
+                quality_assessment = self.ux_manager.get_quality_assessment()
+                
+                # Calculate current metrics safely
+                total_data_gb = 0
+                try:
+                    total_downloaded = self.stats.get_total_downloaded() or 0
+                    total_uploaded = self.stats.get_total_uploaded() or 0
+                    total_data_gb = (total_downloaded + total_uploaded) / (1024**3)
+                except Exception as e:
+                    self.logger.debug(f"Error calculating data usage: {e}")
+                
+                smart_notifications = self.ux_manager.get_smart_notifications(
                     connection_state=self.state.value,
                     current_metrics={
-                        "session_data_gb": (self.stats.get_total_downloaded() + self.stats.get_total_uploaded()) / (1024**3),
+                        "session_data_gb": total_data_gb,
                         "connection_quality": self._calculate_current_quality_score()
                     }
                 )
-            },
-            "profiles": {
-                "available_profiles": len(self.ux_manager.user_profiles),
-                "most_used_profile": self._get_most_used_profile_name(),
-                "profile_suggestions": len(self.get_quick_connect_suggestions())
-            }
-        })
-        
-        return status
+            except Exception as e:
+                self.logger.warning(f"Error getting UX metrics: {e}")
+                quick_suggestions = []
+                usage_insights = {"summary": {}, "patterns": [], "recommendations": []}
+                quality_assessment = {"status": "error", "score": 0}
+                smart_notifications = []
+            
+            # Add UX enhancements safely
+            status.update({
+                "user_experience": {
+                    "quick_connect_suggestions": quick_suggestions,
+                    "usage_insights": usage_insights,
+                    "quality_assessment": quality_assessment,
+                    "smart_notifications": smart_notifications
+                },
+                "profiles": {
+                    "available_profiles": len(self.ux_manager.user_profiles),
+                    "most_used_profile": self._get_most_used_profile_name(),
+                    "profile_suggestions": len(quick_suggestions)
+                }
+            })
+            
+            return status
+            
+        except Exception as e:
+            self.logger.error(f"Error getting enhanced status with UX: {e}")
+            # Return basic status on error
+            try:
+                return self.get_comprehensive_status()
+            except Exception as e2:
+                self.logger.error(f"Error getting basic status: {e2}")
+                return {"state": self.state.value, "error": str(e)}
     
     def _calculate_current_quality_score(self) -> int:
         """Calculate current connection quality score (0-100)"""
