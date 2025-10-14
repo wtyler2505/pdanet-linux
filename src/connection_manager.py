@@ -125,6 +125,9 @@ class ConnectionManager:
         self.resource_manager = get_resource_manager()
         self.reliability_manager = get_reliability_manager()
         
+        # User experience enhancements (P3)
+        self.ux_manager = get_ux_manager()
+        
         # Start performance monitoring and reliability checks
         self.resource_manager.start_monitoring(interval=60)
         self.reliability_manager.start_monitoring()
