@@ -206,14 +206,24 @@ class ResourceManager:
             name="ResourceMonitor"
         )
         self._monitor_thread.start()
-        self.logger.info(f"Resource monitoring started (interval: {interval}s)")
+        # Only log once at startup, not repeatedly
+        if not hasattr(self, '_monitoring_started_logged'):
+            self.logger.info(f"Resource monitoring started (interval: {interval}s)")
+            self._monitoring_started_logged = True
     
     def stop_monitoring(self):
         """Stop background resource monitoring"""
+        if not self._monitoring:
+            return
+            
         self._monitoring = False
         if self._monitor_thread and self._monitor_thread.is_alive():
-            self._monitor_thread.join(timeout=5.0)
-        self.logger.info("Resource monitoring stopped")
+            self._monitor_thread.join(timeout=1.0)  # Reduced timeout
+        
+        # Only log once at shutdown, not repeatedly  
+        if not hasattr(self, '_monitoring_stopped_logged'):
+            self.logger.info("Resource monitoring stopped")
+            self._monitoring_stopped_logged = True
     
     def _monitor_resources(self, interval: int):
         """Background resource monitoring loop"""
