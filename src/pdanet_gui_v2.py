@@ -61,6 +61,7 @@ from connection_manager import ConnectionState, get_connection_manager
 from logger import get_logger
 from stats_collector import get_stats
 from theme import Colors, Format, get_css
+from dialogs.settings_dialog import SettingsDialog
 
 
 class SingleInstance:
