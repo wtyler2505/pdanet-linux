@@ -2037,10 +2037,9 @@ class PdaNetGUI(Gtk.Window):
         # Reload config
         self.config = get_config()
         
-        # Update GUI update interval
-        update_interval = self.config.get("update_interval_ms", 1000)
+        # Update GUI update interval (requires app restart to take effect)
+        # update_interval = self.config.get("update_interval_ms", 1000)
         # Note: Changing timeout requires restart of the update loop
-        # For now, user should restart app for this to take effect
         
         # Update auto-reconnect switch
         auto_reconnect = self.config.get("auto_reconnect", True)
