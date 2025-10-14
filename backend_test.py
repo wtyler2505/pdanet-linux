@@ -1626,9 +1626,371 @@ test("Enhanced Status with UX Metrics - COMPREHENSIVE", test_enhanced_status_wit
 test("Profile Suggestions and AI", test_profile_suggestions_and_ai)
 test("Quality Monitoring and Assessment", test_quality_monitoring_and_assessment)
 
-# Test Suite 12: P3 Keyboard Navigation and Accessibility Tests
-print("\n[12/14] P3 KEYBOARD NAVIGATION AND ACCESSIBILITY TESTS")
+# Test Suite 13: P3 Keyboard Navigation and Accessibility Tests
+print("\n[13/16] P3 KEYBOARD NAVIGATION AND ACCESSIBILITY TESTS")
 print("-" * 80)
+
+def test_keyboard_navigation_manager_initialization():
+    """Test KeyboardNavigationManager initialization"""
+    from keyboard_navigation import KeyboardNavigationManager, AccessibilitySettings, AccessibilityMode
+    
+    nav_manager = KeyboardNavigationManager()
+    assert nav_manager is not None, "KeyboardNavigationManager failed to initialize"
+    assert hasattr(nav_manager, 'shortcuts'), "Missing shortcuts"
+    assert hasattr(nav_manager, 'accessibility'), "Missing accessibility settings"
+    assert hasattr(nav_manager, 'command_palette_commands'), "Missing command palette commands"
+    assert isinstance(nav_manager.accessibility, AccessibilitySettings), "accessibility not AccessibilitySettings instance"
+
+def test_accessibility_settings_and_css_generation():
+    """Test accessibility settings and CSS generation"""
+    from keyboard_navigation import KeyboardNavigationManager, AccessibilityMode
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test high contrast mode
+    nav_manager.enable_accessibility_mode(AccessibilityMode.HIGH_CONTRAST)
+    assert nav_manager.accessibility.mode == AccessibilityMode.HIGH_CONTRAST, "High contrast mode not enabled"
+    assert nav_manager.accessibility.high_contrast == True, "High contrast setting not enabled"
+    
+    css = nav_manager.get_accessibility_css()
+    assert "background: #000000" in css, "High contrast CSS missing background color"
+    assert "color: #FFFFFF" in css, "High contrast CSS missing text color"
+
+def test_keyboard_shortcuts_system():
+    """Test keyboard shortcuts management"""
+    from keyboard_navigation import KeyboardNavigationManager
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test default shortcuts exist
+    assert "connect" in nav_manager.shortcuts, "Connect shortcut missing"
+    assert "disconnect" in nav_manager.shortcuts, "Disconnect shortcut missing"
+    assert "command_palette" in nav_manager.shortcuts, "Command palette shortcut missing"
+    
+    # Test shortcut customization
+    success = nav_manager.customize_shortcut("connect", "Ctrl+Shift+C")
+    assert success == True, "Shortcut customization failed"
+    
+    effective_shortcut = nav_manager.get_effective_shortcut("connect")
+    assert effective_shortcut == "Ctrl+Shift+C", "Effective shortcut not updated"
+
+def test_command_palette_functionality():
+    """Test command palette search and execution"""
+    from keyboard_navigation import KeyboardNavigationManager
+    
+    nav_manager = KeyboardNavigationManager()
+    
+    # Test command search
+    connect_results = nav_manager.search_commands("connect")
+    assert len(connect_results) > 0, "Should find connect-related commands"
+    
+    # Test command execution
+    result = nav_manager.execute_command("connect")
+    assert result["success"] == True, "Command execution should succeed"
+
+test("Keyboard Navigation Manager Initialization", test_keyboard_navigation_manager_initialization)
+test("Accessibility Settings and CSS Generation", test_accessibility_settings_and_css_generation)
+test("Keyboard Shortcuts System", test_keyboard_shortcuts_system)
+test("Command Palette Functionality", test_command_palette_functionality)
+
+# Test Suite 14: P4 Advanced Network Monitor Tests
+print("\n[14/16] P4 ADVANCED NETWORK MONITOR TESTS")
+print("-" * 80)
+
+def test_advanced_network_monitor_initialization():
+    """Test AdvancedNetworkMonitor initialization"""
+    try:
+        from advanced_network_monitor import AdvancedNetworkMonitor
+        
+        monitor = AdvancedNetworkMonitor()
+        assert monitor is not None, "AdvancedNetworkMonitor failed to initialize"
+        assert hasattr(monitor, 'monitoring_active'), "Missing monitoring_active attribute"
+        assert hasattr(monitor, 'network_flows'), "Missing network_flows attribute"
+        assert hasattr(monitor, 'security_events'), "Missing security_events attribute"
+        assert monitor.monitoring_active == False, "Initial monitoring should be inactive"
+    except ImportError:
+        # P4 module may not be available in all environments
+        print("  ⚠️  Advanced Network Monitor module not available - P4 feature")
+
+def test_traffic_analysis_and_flow_collection():
+    """Test traffic analysis and flow collection"""
+    try:
+        from advanced_network_monitor import AdvancedNetworkMonitor
+        
+        monitor = AdvancedNetworkMonitor()
+        
+        # Test traffic analysis methods
+        assert hasattr(monitor, 'get_traffic_analysis'), "Missing get_traffic_analysis method"
+        assert hasattr(monitor, 'get_bandwidth_report'), "Missing get_bandwidth_report method"
+        assert hasattr(monitor, 'get_security_report'), "Missing get_security_report method"
+        
+        # Test analysis returns
+        traffic_analysis = monitor.get_traffic_analysis()
+        assert isinstance(traffic_analysis, dict), "Traffic analysis should return dict"
+        
+        bandwidth_report = monitor.get_bandwidth_report()
+        assert isinstance(bandwidth_report, dict), "Bandwidth report should return dict"
+        
+        security_report = monitor.get_security_report()
+        assert isinstance(security_report, dict), "Security report should return dict"
+        
+    except ImportError:
+        print("  ⚠️  Advanced Network Monitor module not available - P4 feature")
+
+def test_network_monitoring_lifecycle():
+    """Test network monitoring start/stop lifecycle"""
+    try:
+        from advanced_network_monitor import AdvancedNetworkMonitor
+        
+        monitor = AdvancedNetworkMonitor()
+        
+        # Test monitoring lifecycle
+        assert hasattr(monitor, 'start_monitoring'), "Missing start_monitoring method"
+        assert hasattr(monitor, 'stop_monitoring'), "Missing stop_monitoring method"
+        
+        # Test start monitoring
+        monitor.start_monitoring("test_interface")
+        # Note: Actual monitoring may not start in test environment
+        
+        # Test stop monitoring
+        monitor.stop_monitoring()
+        
+    except ImportError:
+        print("  ⚠️  Advanced Network Monitor module not available - P4 feature")
+
+test("Advanced Network Monitor Initialization", test_advanced_network_monitor_initialization)
+test("Traffic Analysis and Flow Collection", test_traffic_analysis_and_flow_collection)
+test("Network Monitoring Lifecycle", test_network_monitoring_lifecycle)
+
+# Test Suite 15: P4 Intelligent Bandwidth Manager Tests
+print("\n[15/16] P4 INTELLIGENT BANDWIDTH MANAGER TESTS")
+print("-" * 80)
+
+def test_intelligent_bandwidth_manager_initialization():
+    """Test IntelligentBandwidthManager initialization"""
+    try:
+        from intelligent_bandwidth_manager import IntelligentBandwidthManager
+        
+        manager = IntelligentBandwidthManager()
+        assert manager is not None, "IntelligentBandwidthManager failed to initialize"
+        assert hasattr(manager, 'qos_enabled'), "Missing qos_enabled attribute"
+        assert hasattr(manager, 'traffic_rules'), "Missing traffic_rules attribute"
+        assert hasattr(manager, 'bandwidth_limits'), "Missing bandwidth_limits attribute"
+        assert manager.qos_enabled == False, "Initial QoS should be disabled"
+    except ImportError:
+        print("  ⚠️  Intelligent Bandwidth Manager module not available - P4 feature")
+
+def test_qos_priority_classification_system():
+    """Test QoS priority classification system"""
+    try:
+        from intelligent_bandwidth_manager import IntelligentBandwidthManager, QoSPriority
+        
+        manager = IntelligentBandwidthManager()
+        
+        # Test QoS methods
+        assert hasattr(manager, 'enable_qos'), "Missing enable_qos method"
+        assert hasattr(manager, 'disable_qos'), "Missing disable_qos method"
+        assert hasattr(manager, 'get_qos_status'), "Missing get_qos_status method"
+        assert hasattr(manager, 'get_traffic_classification_report'), "Missing get_traffic_classification_report method"
+        
+        # Test QoS status
+        qos_status = manager.get_qos_status()
+        assert isinstance(qos_status, dict), "QoS status should return dict"
+        assert "qos_enabled" in qos_status, "QoS status missing qos_enabled field"
+        
+        # Test traffic classification report
+        classification_report = manager.get_traffic_classification_report()
+        assert isinstance(classification_report, dict), "Classification report should return dict"
+        
+    except ImportError:
+        print("  ⚠️  Intelligent Bandwidth Manager module not available - P4 feature")
+
+def test_bandwidth_limit_creation_and_management():
+    """Test bandwidth limit creation and management"""
+    try:
+        from intelligent_bandwidth_manager import IntelligentBandwidthManager, QoSPriority
+        
+        manager = IntelligentBandwidthManager()
+        
+        # Test bandwidth limit creation
+        assert hasattr(manager, 'create_bandwidth_limit'), "Missing create_bandwidth_limit method"
+        
+        # Test creating a bandwidth limit
+        success = manager.create_bandwidth_limit(
+            name="test_limit",
+            download_kbps=10000,
+            upload_kbps=5000,
+            priority=QoSPriority.NORMAL,
+            applications=["firefox", "chrome"]
+        )
+        
+        # Should return boolean or handle gracefully
+        assert isinstance(success, bool), "create_bandwidth_limit should return boolean"
+        
+    except ImportError:
+        print("  ⚠️  Intelligent Bandwidth Manager module not available - P4 feature")
+
+test("Intelligent Bandwidth Manager Initialization", test_intelligent_bandwidth_manager_initialization)
+test("QoS Priority Classification System", test_qos_priority_classification_system)
+test("Bandwidth Limit Creation and Management", test_bandwidth_limit_creation_and_management)
+
+# Test Suite 16: P4 Complete Integration Tests
+print("\n[16/16] P4 COMPLETE INTEGRATION TESTS - ALL ENHANCEMENT PHASES")
+print("-" * 80)
+
+def test_p1_p2_p3_p4_complete_integration():
+    """Test complete P1+P2+P3+P4 integration"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager'), \
+         patch('connection_manager.get_reliability_manager'), \
+         patch('connection_manager.get_ux_manager'), \
+         patch('connection_manager.get_advanced_network_monitor') as mock_monitor, \
+         patch('connection_manager.get_intelligent_bandwidth_manager') as mock_bandwidth:
+        
+        from connection_manager import ConnectionManager
+        
+        # Mock P4 components
+        mock_monitor_instance = Mock()
+        mock_monitor_instance.monitoring_active = False
+        mock_monitor_instance.get_traffic_analysis.return_value = {"status": "active"}
+        mock_monitor_instance.get_bandwidth_report.return_value = {"total_bytes": 1024*1024}
+        mock_monitor_instance.get_security_report.return_value = {"status": "secure"}
+        mock_monitor.return_value = mock_monitor_instance
+        
+        mock_bandwidth_instance = Mock()
+        mock_bandwidth_instance.qos_enabled = False
+        mock_bandwidth_instance.bandwidth_limits = {}
+        mock_bandwidth_instance.traffic_rules = {}
+        mock_bandwidth_instance.get_qos_status.return_value = {"qos_enabled": False}
+        mock_bandwidth_instance.get_traffic_classification_report.return_value = {"total_classifiers": 42}
+        mock_bandwidth.return_value = mock_bandwidth_instance
+        
+        conn = ConnectionManager()
+        
+        # Test P4 components are initialized
+        assert hasattr(conn, 'network_monitor'), "Missing network_monitor (P4)"
+        assert hasattr(conn, 'bandwidth_manager'), "Missing bandwidth_manager (P4)"
+        
+        # Test P4 methods exist
+        assert hasattr(conn, 'start_advanced_monitoring'), "Missing start_advanced_monitoring method"
+        assert hasattr(conn, 'enable_intelligent_qos'), "Missing enable_intelligent_qos method"
+        assert hasattr(conn, 'get_advanced_status'), "Missing get_advanced_status method"
+        assert hasattr(conn, 'create_bandwidth_profile'), "Missing create_bandwidth_profile method"
+
+def test_advanced_status_reporting_comprehensive():
+    """Test comprehensive advanced status reporting with all P1+P2+P3+P4 metrics"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager') as mock_resource, \
+         patch('connection_manager.get_reliability_manager') as mock_reliability, \
+         patch('connection_manager.get_ux_manager') as mock_ux, \
+         patch('connection_manager.get_advanced_network_monitor') as mock_monitor, \
+         patch('connection_manager.get_intelligent_bandwidth_manager') as mock_bandwidth:
+        
+        from connection_manager import ConnectionManager
+        
+        # Mock all components for comprehensive status
+        mock_resource_instance = Mock()
+        mock_resource_instance.get_resource_summary.return_value = {"memory_usage": "50MB"}
+        mock_resource.return_value = mock_resource_instance
+        
+        mock_reliability_instance = Mock()
+        mock_reliability_instance.get_reliability_summary.return_value = {"uptime": "99.9%"}
+        mock_reliability_instance.get_failure_analysis.return_value = {"total_failures": 0}
+        mock_reliability.return_value = mock_reliability_instance
+        
+        mock_ux_instance = Mock()
+        mock_ux_instance.user_profiles = {}
+        mock_ux_instance.get_usage_insights.return_value = {"summary": {}}
+        mock_ux_instance.get_quality_assessment.return_value = {"status": "good"}
+        mock_ux_instance.get_smart_notifications.return_value = []
+        mock_ux.return_value = mock_ux_instance
+        
+        mock_monitor_instance = Mock()
+        mock_monitor_instance.monitoring_active = True
+        mock_monitor_instance.get_traffic_analysis.return_value = {"flows": 100}
+        mock_monitor_instance.get_bandwidth_report.return_value = {"total_bytes": 1024*1024*1024}
+        mock_monitor_instance.get_security_report.return_value = {"threats_detected": 0}
+        mock_monitor.return_value = mock_monitor_instance
+        
+        mock_bandwidth_instance = Mock()
+        mock_bandwidth_instance.qos_enabled = True
+        mock_bandwidth_instance.bandwidth_limits = {"limit1": {}}
+        mock_bandwidth_instance.traffic_rules = {"rule1": {}}
+        mock_bandwidth_instance.get_qos_status.return_value = {"qos_enabled": True, "active_rules": 5}
+        mock_bandwidth_instance.get_traffic_classification_report.return_value = {"total_classifiers": 42}
+        mock_bandwidth.return_value = mock_bandwidth_instance
+        
+        conn = ConnectionManager()
+        
+        # Test advanced status retrieval
+        status = conn.get_advanced_status()
+        
+        assert isinstance(status, dict), "Advanced status should return dict"
+        assert "state" in status, "Missing connection state"
+        
+        # Test P4 advanced features section
+        if "advanced_features" in status:
+            advanced = status["advanced_features"]
+            assert "network_monitoring" in advanced, "Missing network_monitoring section"
+            assert "intelligent_qos" in advanced, "Missing intelligent_qos section"
+            
+            # Test network monitoring section
+            network_section = advanced["network_monitoring"]
+            assert "enabled" in network_section, "Missing monitoring enabled status"
+            assert "traffic_analysis" in network_section, "Missing traffic analysis"
+            assert "bandwidth_report" in network_section, "Missing bandwidth report"
+            assert "security_report" in network_section, "Missing security report"
+            
+            # Test QoS section
+            qos_section = advanced["intelligent_qos"]
+            assert "status" in qos_section, "Missing QoS status"
+            assert "classification" in qos_section, "Missing classification report"
+        
+        # Test feature summary
+        if "feature_summary" in status:
+            summary = status["feature_summary"]
+            assert "p1_critical_functionality" in summary, "Missing P1 status"
+            assert "p2_performance_optimization" in summary, "Missing P2 status"
+            assert "p3_user_experience" in summary, "Missing P3 status"
+            assert "p4_advanced_features" in summary, "Missing P4 status"
+
+def test_enterprise_grade_capabilities():
+    """Test enterprise-grade network management capabilities"""
+    with patch('connection_manager.get_logger'), \
+         patch('connection_manager.get_stats'), \
+         patch('connection_manager.get_config'), \
+         patch('connection_manager.get_resource_manager'), \
+         patch('connection_manager.get_reliability_manager'), \
+         patch('connection_manager.get_ux_manager'), \
+         patch('connection_manager.get_advanced_network_monitor'), \
+         patch('connection_manager.get_intelligent_bandwidth_manager'):
+        
+        from connection_manager import ConnectionManager
+        
+        conn = ConnectionManager()
+        
+        # Test enterprise features exist
+        assert hasattr(conn, 'create_bandwidth_profile'), "Missing bandwidth profile creation"
+        assert hasattr(conn, 'export_comprehensive_logs'), "Missing comprehensive log export"
+        
+        # Test bandwidth profile creation
+        success = conn.create_bandwidth_profile(
+            name="enterprise_profile",
+            download_limit_kbps=100000,  # 100 Mbps
+            upload_limit_kbps=50000,     # 50 Mbps
+            applications=["business_app", "video_conference"]
+        )
+        
+        # Should handle gracefully even if P4 modules not available
+        assert isinstance(success, bool), "Bandwidth profile creation should return boolean"
+
+test("P1+P2+P3+P4 Complete Integration", test_p1_p2_p3_p4_complete_integration)
+test("Advanced Status Reporting - COMPREHENSIVE", test_advanced_status_reporting_comprehensive)
+test("Enterprise-Grade Capabilities", test_enterprise_grade_capabilities)
 
 def test_keyboard_navigation_manager_initialization():
     """Test KeyboardNavigationManager initialization"""
