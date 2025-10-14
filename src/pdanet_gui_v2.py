@@ -219,6 +219,7 @@ class PdaNetGUI(Gtk.Window):
         # Register callbacks
         self.connection.register_state_change_callback(self.on_connection_state_changed)
         self.connection.register_error_callback(self.on_connection_error)
+        self.connection.register_error_recovery_callback(self.on_error_recovery_needed)
 
         # Test-mode state override (for deterministic visual tests)
         self._test_state_file = None
