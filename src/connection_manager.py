@@ -37,6 +37,7 @@ from input_validators import (
     validate_interface_name,
     validate_subprocess_args,
 )
+from error_database import get_error_info
 
 
 class ConnectionState(Enum):
