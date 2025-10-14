@@ -307,6 +307,81 @@ class ConnectionManager:
             except Exception as e:
                 self.logger.error(f"Error callback error: {e}")
 
+    def _handle_error_with_code(self, error_code: str, error_message: str, context_data: dict = None):
+        """
+        Handle error with structured error code for recovery system
+        
+        Args:
+            error_code: Standardized error code from error database
+            error_message: Human-readable error message  
+            context_data: Additional context for error resolution
+        """
+        try:
+            # Store error with code for recovery system
+            self.last_error = error_message
+            self.last_error_code = getattr(self, 'last_error_code', None)
+            self.last_error_code = error_code
+            
+            # Get structured error info
+            error_info = get_error_info(error_code)
+            
+            # Set error state
+            self._set_state(ConnectionState.ERROR)
+            
+            # Report to reliability manager
+            self.reliability_manager.report_failure(error_code, error_message, context_data)
+            
+            # Notify error callbacks with enhanced information
+            enhanced_error = {
+                'code': error_code,
+                'message': error_message,
+                'context': context_data or {},
+                'error_info': error_info,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Legacy callback support
+            self._notify_error(error_message)
+            
+            # Enhanced callback for recovery system
+            if hasattr(self, 'error_recovery_callbacks'):
+                for callback in self.error_recovery_callbacks:
+                    try:
+                        callback(enhanced_error)
+                    except Exception as e:
+                        self.logger.error(f"Error recovery callback error: {e}")
+            
+            # Log structured error
+            if error_info:
+                self.logger.error(f"Error [{error_code}]: {error_message} - {error_info.title}")
+            else:
+                self.logger.error(f"Error [{error_code}]: {error_message}")
+                
+        except Exception as e:
+            # Fallback error handling
+            self.logger.error(f"Error in error handling system: {e}")
+            self.last_error = error_message
+            self._set_state(ConnectionState.ERROR)
+            self._notify_error(error_message)
+
+    def register_error_recovery_callback(self, callback):
+        """Register callback for enhanced error recovery"""
+        if not hasattr(self, 'error_recovery_callbacks'):
+            self.error_recovery_callbacks = []
+        self.error_recovery_callbacks.append(callback)
+
+    def get_last_error_info(self):
+        """Get structured information about the last error"""
+        if not hasattr(self, 'last_error_code') or not self.last_error_code:
+            return None
+        
+        return {
+            'code': self.last_error_code,
+            'message': self.last_error,
+            'error_info': get_error_info(self.last_error_code),
+            'context': getattr(self, 'last_error_context', {})
+        }
+
     def _set_state(self, new_state):
         """
         Update connection state with transition validation
