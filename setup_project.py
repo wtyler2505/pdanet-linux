@@ -536,8 +536,7 @@ markers =
         f.write(test_config)
     
     # Basic test file
-    basic_test = """
-#!/usr/bin/env python3
+    basic_test = '''#!/usr/bin/env python3
 """
 Basic tests for AI-Enhanced PDanet-Linux
 """
@@ -559,7 +558,7 @@ def test_placeholder():
 # def test_health_endpoint(client):
 #     response = client.get("/health")
 #     assert response.status_code == 200
-"""
+'''
     
     with open("tests/test_basic.py", "w") as f:
         f.write(basic_test)
