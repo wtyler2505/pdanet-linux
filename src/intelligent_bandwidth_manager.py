@@ -189,7 +189,6 @@ class IntelligentBandwidthManager:
             # Gaming ports
             27015: TrafficClass.GAMING,      # Steam
             3724: TrafficClass.GAMING,       # WoW
-            1935: TrafficClass.GAMING,       # RTMP
             
             # Web protocols
             80: TrafficClass.WEB,            # HTTP
@@ -197,7 +196,6 @@ class IntelligentBandwidthManager:
             8080: TrafficClass.WEB,          # HTTP Alt
             
             # Streaming protocols
-            1935: TrafficClass.STREAMING,    # RTMP
             554: TrafficClass.STREAMING,     # RTSP
             
             # File transfer
