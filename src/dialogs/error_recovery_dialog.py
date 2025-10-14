@@ -5,7 +5,8 @@ Shows user-friendly error messages with actionable solutions
 
 import gi
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GLib
 import subprocess
 from typing import Optional
 
