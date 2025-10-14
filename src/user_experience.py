@@ -215,20 +215,32 @@ class UserExperienceManager:
     def save_preferences(self):
         """Save user preferences atomically"""
         try:
+            # Ensure directory exists
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            
             temp_file = self.preferences_file.with_suffix('.tmp')
             with open(temp_file, 'w') as f:
                 json.dump(self.user_preferences, f, indent=2)
+            
+            # Atomic move
             temp_file.replace(self.preferences_file)
+            
         except Exception as e:
             self.logger.error(f"Failed to save preferences: {e}")
     
     def save_usage_statistics(self):
         """Save usage statistics atomically"""
         try:
+            # Ensure directory exists
+            self.config_dir.mkdir(parents=True, exist_ok=True)
+            
             temp_file = self.usage_file.with_suffix('.tmp')
             with open(temp_file, 'w') as f:
                 json.dump(asdict(self.usage_stats), f, indent=2)
+            
+            # Atomic move
             temp_file.replace(self.usage_file)
+            
         except Exception as e:
             self.logger.error(f"Failed to save usage statistics: {e}")
     
