@@ -1013,14 +1013,23 @@ class ConnectionManager:
         
         # Add performance metrics
         if hasattr(self, 'resource_manager'):
-            base_status['performance'] = self.resource_manager.get_resource_summary()
+            try:
+                base_status['performance'] = self.resource_manager.get_resource_summary()
+            except Exception as e:
+                self.logger.debug(f"Error getting performance metrics: {e}")
+                base_status['performance'] = {"error": "unavailable"}
         
         # Add reliability metrics  
         if hasattr(self, 'reliability_manager'):
-            base_status['reliability'] = self.reliability_manager.get_reliability_summary()
-            base_status['failure_analysis'] = self.reliability_manager.get_failure_analysis()
+            try:
+                base_status['reliability'] = self.reliability_manager.get_reliability_summary()
+                base_status['failure_analysis'] = self.reliability_manager.get_failure_analysis()
+            except Exception as e:
+                self.logger.debug(f"Error getting reliability metrics: {e}")
+                base_status['reliability'] = {"error": "unavailable"}
+                base_status['failure_analysis'] = {"error": "unavailable"}
         
-        # Add network health
+        return base_status
     # ------------------------------------------------------------------
     # Enhanced User Experience Integration (P3-UX)
     # ------------------------------------------------------------------
