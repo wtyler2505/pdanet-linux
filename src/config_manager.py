@@ -210,13 +210,61 @@ class ConfigManager:
             return self.validator.get_default_config()
 
     def save_config(self):
-        """Save configuration to file"""
+        """Save configuration to file with validation and backup"""
         try:
-            with open(self.config_file, "w") as f:
-                json.dump(self.config, f, indent=2)
+            # Validate config before saving
+            is_valid, errors = self.validator.validate_config(self.config)
+            
+            logger = get_logger()
+            if not is_valid:
+                if logger:
+                    logger.warning(f"Attempting to save invalid config. Errors: {errors}")
+                
+                # Try to fix errors automatically
+                fixed_config, warnings = self.validator.validate_and_fix_config(self.config)
+                self.config = fixed_config
+                
+                if logger and warnings:
+                    for warning in warnings:
+                        logger.warning(f"Config auto-fix: {warning}")
+            
+            # Create backup before saving
+            if self.config_file.exists():
+                try:
+                    backup_path = self.validator.create_backup(self.config)
+                    if logger:
+                        logger.debug(f"Config backup created: {backup_path}")
+                except Exception as e:
+                    if logger:
+                        logger.warning(f"Failed to create config backup: {e}")
+            
+            # Add integrity hash and update metadata
+            config_to_save = self.config.copy()
+            config_to_save['last_updated'] = datetime.now().isoformat()
+            config_with_integrity = self.validator.add_integrity_hash(config_to_save)
+            
+            # Save with atomic write
+            temp_file = self.config_file.with_suffix('.tmp')
+            with open(temp_file, "w") as f:
+                json.dump(config_with_integrity, f, indent=2)
+            
+            # Atomic rename
+            temp_file.rename(self.config_file)
+            
+            if logger:
+                logger.debug("Configuration saved successfully with integrity protection")
             return True
+            
         except Exception as e:
-            print(f"Error saving config: {e}")
+            logger = get_logger()
+            if logger:
+                logger.error(f"Error saving config: {e}")
+            
+            # Clean up temp file if it exists
+            temp_file = self.config_file.with_suffix('.tmp')
+            if temp_file.exists():
+                temp_file.unlink()
+            
             return False
 
     # Compatibility alias for older integrations/tests
