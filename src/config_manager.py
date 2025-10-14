@@ -159,30 +159,55 @@ class ConfigManager:
         return True
 
     def load_config(self):
-        """Load configuration from file or create defaults"""
+        """Load configuration from file with enhanced validation"""
         if self.config_file.exists():
             try:
                 with open(self.config_file) as f:
-                    config = json.load(f)
-                    # Merge with defaults (add any new keys)
-                    validated_config = {}
-                    for key, value in self.defaults.items():
-                        if key in config:
-                            try:
-                                # Validate loaded values
-                                self._validate_config_value(key, config[key])
-                                validated_config[key] = config[key]
-                            except (ValueError, TypeError) as e:
-                                print(f"Invalid config value for {key}: {e}, using default")
-                                validated_config[key] = value
-                        else:
-                            validated_config[key] = value
-                    return validated_config
+                    raw_config = json.load(f)
+                
+                # Verify integrity if available
+                integrity_ok = self.validator.verify_integrity(raw_config.copy())
+                if not integrity_ok:
+                    logger = get_logger()
+                    if logger:
+                        logger.warning("Config integrity check failed - possible corruption or tampering")
+                
+                # Validate and fix configuration
+                fixed_config, warnings = self.validator.validate_and_fix_config(raw_config)
+                
+                # Log any warnings
+                logger = get_logger()
+                if logger and warnings:
+                    for warning in warnings:
+                        logger.warning(f"Config validation: {warning}")
+                
+                # If fixes were applied, save the corrected config
+                if warnings:
+                    self.config = fixed_config
+                    self.save_config()
+                    return fixed_config
+                
+                return fixed_config
+                
             except Exception as e:
-                print(f"Error loading config: {e}")
-                return self.defaults.copy()
+                logger = get_logger()
+                if logger:
+                    logger.error(f"Error loading config: {e}")
+                
+                # Create backup of corrupted config
+                try:
+                    corrupted_backup = self.config_file.with_suffix('.corrupted.json')
+                    self.config_file.rename(corrupted_backup)
+                    if logger:
+                        logger.info(f"Corrupted config backed up to: {corrupted_backup}")
+                except:
+                    pass
+                
+                # Return defaults
+                return self.validator.get_default_config()
         else:
-            return self.defaults.copy()
+            # First run - create default config
+            return self.validator.get_default_config()
 
     def save_config(self):
         """Save configuration to file"""
