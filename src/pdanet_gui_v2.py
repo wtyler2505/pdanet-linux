@@ -429,8 +429,8 @@ class PdaNetGUI(Gtk.Window):
         status_panel.set_vexpand(False)
         grid.attach(status_panel, 0, 0, 1, 1)
 
-        # Top right: Metrics panel
-        metrics_panel = self.build_metrics_panel()
+        # Top right: Enhanced metrics panel with Data Usage Dashboard
+        metrics_panel = self.build_enhanced_metrics_panel()
         metrics_panel.set_hexpand(True)
         metrics_panel.set_vexpand(False)
         grid.attach(metrics_panel, 1, 0, 1, 1)
