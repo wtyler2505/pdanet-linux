@@ -90,3 +90,7 @@ config/*.local.*
 *.pem
 *.crt
 secrets/
+-e 
+# Environment files
+*.env
+*.env.*
