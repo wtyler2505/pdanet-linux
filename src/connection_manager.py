@@ -1386,9 +1386,6 @@ class ConnectionManager:
         except Exception as e:
             self.logger.error(f"Failed to export comprehensive logs: {e}")
             return False
-                result["speed_test_started"] = True
-                
-        return result
 
     def _handle_disconnect_and_reconnect(self):
         """Handle unexpected disconnect and attempt reconnection"""
