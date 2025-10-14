@@ -1248,6 +1248,170 @@ class ConnectionManager:
         """Stop advanced network monitoring"""
         self.network_monitor.stop_monitoring()
         self.logger.info("Advanced monitoring stopped")
+    def connect_to_iphone_hotspot(self, ssid: str, password: Optional[str] = None, 
+                                 enhanced_bypass: bool = True) -> bool:
+        """
+        Enhanced iPhone hotspot connection with advanced carrier detection bypass
+        Implements enterprise-grade stealth techniques specifically for iPhone Personal Hotspot
+        """
+        self.logger.info(f"Connecting to iPhone hotspot: {ssid} (Enhanced bypass: {enhanced_bypass})")
+        
+        try:
+            # Step 1: Use enhanced connection script if available
+            if enhanced_bypass:
+                script = self._find_script("pdanet-iphone-connect-enhanced")
+                if script:
+                    self.logger.info("Using enhanced iPhone bypass connection script")
+                else:
+                    script = self.iphone_connect_script
+                    self.logger.info("Enhanced script not found, using standard iPhone script")
+            else:
+                script = self.iphone_connect_script
+            
+            if not script:
+                self.last_error = "iPhone connection script not found"
+                self.reliability_manager.report_failure("iphone_script_missing", self.last_error)
+                return False
+            
+            # Step 2: Execute connection with enhanced stealth
+            self.logger.info(f"Executing iPhone connection: {script}")
+            
+            cmd = [script]
+            if ssid:
+                cmd.append(f"SSID={ssid}")
+            if password:
+                cmd.append(f"PASSWORD={password}")
+            cmd.append(f"LEVEL={self.stealth_level}")
+            
+            result = self._run_privileged(cmd, timeout=180)  # Longer timeout for iPhone
+            
+            if result and result.returncode == 0:
+                self.current_mode = "iphone"
+                self._set_state(ConnectionState.CONNECTED)
+                
+                # Detect iPhone WiFi interface
+                interface = self.detect_interface()
+                if interface:
+                    self.current_interface = interface
+                    
+                    # Enable advanced iPhone bypass if requested and not already applied
+                    if enhanced_bypass and interface:
+                        bypass_success = self.iphone_bypass.enable_iphone_hotspot_bypass(
+                            interface, self.stealth_level
+                        )
+                        
+                        if bypass_success:
+                            bypass_status = self.iphone_bypass.get_bypass_status()
+                            success_rate = bypass_status['success_rate']
+                            active_techniques = len(bypass_status['active_techniques'])
+                            
+                            self.logger.ok(f"Enhanced iPhone bypass active: {success_rate:.1f}% "
+                                         f"({active_techniques} techniques)")
+                        else:
+                            self.logger.warning("Enhanced iPhone bypass failed, using standard stealth")
+                    
+                    # Start monitoring and stats
+                    self.stats.start_session()
+                    self.start_monitoring()
+                    
+                    # Start advanced monitoring if available
+                    self.start_advanced_monitoring()
+                    
+                    self.logger.ok(f"iPhone hotspot connected successfully on {interface}")
+                    return True
+                else:
+                    self.logger.warning("iPhone connection succeeded but interface detection failed")
+                    return True  # Connection still works
+            else:
+                error_msg = f"iPhone connection script failed: {result.stderr if result else 'No result'}"
+                self.last_error = error_msg
+                self._set_state(ConnectionState.ERROR)
+                self.reliability_manager.report_failure("iphone_connection_failed", error_msg)
+                return False
+                
+        except Exception as e:
+            error_msg = f"iPhone hotspot connection error: {e}"
+            self.last_error = error_msg
+            self._set_state(ConnectionState.ERROR) 
+            self.reliability_manager.report_failure("iphone_connection_exception", error_msg)
+            self.logger.error(error_msg)
+            return False
+    
+    def get_iphone_bypass_status(self) -> Dict[str, Any]:
+        """Get detailed iPhone bypass status and effectiveness"""
+        if self.current_mode != "iphone":
+            return {"status": "not_iphone_mode", "bypass_enabled": False}
+        
+        try:
+            bypass_status = self.iphone_bypass.get_bypass_status()
+            bypass_report = self.iphone_bypass.get_bypass_report()
+            
+            return {
+                "mode": "iphone",
+                "interface": self.current_interface,
+                "bypass_enabled": bypass_status["bypass_enabled"],
+                "stealth_level": bypass_status["stealth_level"],
+                "active_techniques": bypass_status["active_techniques"],
+                "success_rate": bypass_status["success_rate"],
+                "total_techniques": bypass_status["total_techniques"],
+                "technique_details": bypass_report["techniques"],
+                "recommendations": bypass_report["recommendations"],
+                "configuration": bypass_status["configuration"]
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error getting iPhone bypass status: {e}")
+            return {"status": "error", "error": str(e)}
+    
+    def optimize_iphone_bypass(self) -> Dict[str, Any]:
+        """Optimize iPhone bypass based on current effectiveness"""
+        if self.current_mode != "iphone" or not self.current_interface:
+            return {"success": False, "reason": "Not connected to iPhone hotspot"}
+        
+        try:
+            # Get current bypass status
+            current_status = self.iphone_bypass.get_bypass_status()
+            current_success_rate = current_status['success_rate']
+            
+            self.logger.info(f"Optimizing iPhone bypass (current: {current_success_rate:.1f}%)")
+            
+            # If success rate is low, try to re-enable failed techniques
+            if current_success_rate < 80:
+                self.logger.warning("Low bypass success rate, attempting re-optimization")
+                
+                # Disable and re-enable bypass to retry failed techniques
+                self.iphone_bypass.disable_iphone_hotspot_bypass()
+                time.sleep(2)
+                
+                success = self.iphone_bypass.enable_iphone_hotspot_bypass(
+                    self.current_interface, self.stealth_level
+                )
+                
+                if success:
+                    new_status = self.iphone_bypass.get_bypass_status()
+                    new_success_rate = new_status['success_rate']
+                    
+                    improvement = new_success_rate - current_success_rate
+                    
+                    return {
+                        "success": True,
+                        "previous_rate": current_success_rate,
+                        "new_rate": new_success_rate,
+                        "improvement": improvement,
+                        "message": f"Bypass optimization {'successful' if improvement > 0 else 'unchanged'}"
+                    }
+                else:
+                    return {"success": False, "reason": "Re-optimization failed"}
+            else:
+                return {
+                    "success": True, 
+                    "message": "Bypass already optimal",
+                    "success_rate": current_success_rate
+                }
+                
+        except Exception as e:
+            self.logger.error(f"iPhone bypass optimization failed: {e}")
+            return {"success": False, "reason": str(e)}
     
     def enable_intelligent_qos(self) -> bool:
         """Enable intelligent Quality of Service"""
