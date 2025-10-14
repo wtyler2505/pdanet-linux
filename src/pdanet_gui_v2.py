@@ -1455,7 +1455,7 @@ class PdaNetGUI(Gtk.Window):
         self.autostart_switch.set_active(autostart)
 
     def on_connect_clicked(self, button):
-        """Handle connect button"""
+        """Handle connect button with enhanced iPhone hotspot support"""
         mode = self.mode_combo.get_active_id()
 
         # For iPhone and WiFi modes, show dialog to get SSID/password
@@ -1468,7 +1468,37 @@ class PdaNetGUI(Gtk.Window):
 
             self.connect_button.set_sensitive(False)
             self.disconnect_button.set_sensitive(False)
-            self.connection.connect(mode=mode, ssid=ssid, password=password)
+            
+            # Use enhanced iPhone connection for iPhone mode
+            if mode == "iphone":
+                self.logger.info(f"Connecting to iPhone hotspot with enhanced bypass: {ssid}")
+                success = self.connection.connect_to_iphone_hotspot(
+                    ssid=ssid, 
+                    password=password,
+                    enhanced_bypass=True
+                )
+                
+                if success:
+                    # Show iPhone bypass status
+                    bypass_status = self.connection.get_iphone_bypass_status()
+                    success_rate = bypass_status.get('success_rate', 0)
+                    techniques = len(bypass_status.get('active_techniques', []))
+                    
+                    self.show_notification(
+                        "iPhone Hotspot Connected", 
+                        f"Enhanced bypass active: {success_rate:.0f}% effectiveness "
+                        f"({techniques} techniques)",
+                        "normal"
+                    )
+                else:
+                    self.show_notification(
+                        "iPhone Connection Failed",
+                        "Check iPhone hotspot settings and password",
+                        "critical"
+                    )
+            else:
+                # Standard WiFi connection
+                self.connection.connect(mode=mode, ssid=ssid, password=password)
 
             # Save password after successful connection
             if save_password and password:
