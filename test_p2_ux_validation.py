@@ -80,18 +80,19 @@ def test_error_recovery_dialog_fix():
         ]
         
         # Find ErrorRecoveryDialog constructor calls
-        dialog_calls = re.findall(r'ErrorRecoveryDialog\((.*?)\)', gui_content, re.DOTALL)
+        dialog_section = re.search(r'ErrorRecoveryDialog\((.*?)\)', gui_content, re.DOTALL)
         
-        if not dialog_calls:
+        if not dialog_section:
             print("  ✗ No ErrorRecoveryDialog constructor calls found")
             return False
         
+        call_content = dialog_section.group(1)
+        
         all_correct = True
-        for call in dialog_calls:
-            for required_param in correct_params:
-                if required_param not in call:
-                    print(f"  ✗ Missing parameter in call: {required_param}")
-                    all_correct = False
+        for required_param in correct_params:
+            if required_param not in call_content:
+                print(f"  ✗ Missing parameter in call: {required_param}")
+                all_correct = False
         
         if all_correct:
             print("  ✓ All ErrorRecoveryDialog constructor calls use correct parameters")
