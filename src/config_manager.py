@@ -1,7 +1,7 @@
 """
 PdaNet Linux - Configuration Manager
 Handles settings, profiles, and persistent state
-SECURITY HARDENED VERSION
+SECURITY HARDENED VERSION with advanced validation
 """
 
 import ipaddress
@@ -17,6 +17,8 @@ try:
 except Exception:  # pragma: no cover - fallback for direct module imports
     # When modules are imported directly from `src/` (tests add `src` to sys.path)
     import secret_store as secrets  # type: ignore
+
+from config_validator import ConfigValidator
 
 CONFIG_DIR = str(Path.home() / ".config" / "pdanet-linux")
 
