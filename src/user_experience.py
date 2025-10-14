@@ -131,15 +131,27 @@ class UserExperienceManager:
             "metric_units": "metric"  # or "imperial"
         }
         
-        if self.preferences_file.exists():
+        if not self.preferences_file.exists():
+            # Save defaults for first time
             try:
-                with open(self.preferences_file) as f:
-                    loaded = json.load(f)
-                    defaults.update(loaded)
+                self.config_dir.mkdir(parents=True, exist_ok=True)
+                with open(self.preferences_file, 'w') as f:
+                    json.dump(defaults, f, indent=2)
+                self.logger.info("Created default user preferences")
             except Exception as e:
-                self.logger.warning(f"Failed to load preferences: {e}")
+                self.logger.warning(f"Could not create default preferences: {e}")
+            return defaults.copy()
         
-        return defaults
+        try:
+            with open(self.preferences_file) as f:
+                loaded = json.load(f)
+                # Merge with defaults to ensure all keys exist
+                result = defaults.copy()
+                result.update(loaded)
+                return result
+        except Exception as e:
+            self.logger.warning(f"Failed to load preferences: {e}")
+            return defaults.copy()
     
     def _load_usage_statistics(self) -> UsageStatistics:
         """Load usage statistics with error handling"""
