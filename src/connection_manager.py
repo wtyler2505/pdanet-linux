@@ -321,6 +321,7 @@ class ConnectionManager:
             self.last_error = error_message
             self.last_error_code = getattr(self, 'last_error_code', None)
             self.last_error_code = error_code
+            self.last_error_context = context_data or {}
             
             # Get structured error info
             error_info = get_error_info(error_code)
