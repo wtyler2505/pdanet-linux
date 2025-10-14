@@ -277,16 +277,65 @@ class ConfigManager:
 
     def set(self, key, value):
         """
-        Set configuration value and save
-        SECURITY FIX: Validates all inputs before saving
+        Set configuration value with enhanced validation
         """
-        self._validate_config_value(key, value)
+        # Use new validator for validation
+        temp_config = self.config.copy()
+        temp_config[key] = value
+        
+        is_valid, errors = self.validator.validate_config(temp_config)
+        if not is_valid:
+            # Check if this specific key has errors
+            key_errors = [error for error in errors if f"'{key}'" in error]
+            if key_errors:
+                raise ValueError(f"Invalid value for {key}: {'; '.join(key_errors)}")
+        
         self.config[key] = value
         self.save_config()
+    
+    def validate_current_config(self):
+        """
+        Validate current configuration and return status
+        
+        Returns:
+            Tuple of (is_valid, errors, warnings)
+        """
+        is_valid, errors = self.validator.validate_config(self.config)
+        
+        # Also check for potential improvements
+        fixed_config, warnings = self.validator.validate_and_fix_config(self.config)
+        
+        return is_valid, errors, warnings
+    
+    def fix_config_issues(self):
+        """
+        Automatically fix configuration issues where possible
+        
+        Returns:
+            List of fixes applied
+        """
+        fixed_config, warnings = self.validator.validate_and_fix_config(self.config)
+        
+        if warnings:
+            self.config = fixed_config
+            self.save_config()
+        
+        return warnings
+    
+    def create_config_backup(self):
+        """Create manual backup of current configuration"""
+        try:
+            backup_path = self.validator.create_backup(self.config)
+            return str(backup_path)
+        except Exception as e:
+            logger = get_logger()
+            if logger:
+                logger.error(f"Failed to create manual backup: {e}")
+            return None
 
     def reset_to_defaults(self):
         """Reset configuration to defaults"""
-        self.config = self.defaults.copy()
+        self.config = self.validator.get_default_config()
         self.save_config()
 
     # Profile Management
