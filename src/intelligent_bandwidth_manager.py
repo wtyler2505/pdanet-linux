@@ -535,8 +535,8 @@ class IntelligentBandwidthManager:
             "qos_enabled": self.qos_enabled,
             "current_interface": self.current_interface,
             "tc_configured": self.tc_configured,
-            "active_bandwidth_limits": len([l for l in self.bandwidth_limits.values() if l.enabled]),
-            "active_traffic_rules": len([r for r in self.traffic_rules.values() if r.enabled]),
+            "active_bandwidth_limits": len([limit for limit in self.bandwidth_limits.values() if limit.enabled]),
+            "active_traffic_rules": len([rule for rule in self.traffic_rules.values() if rule.enabled]),
             "statistics": asdict(self.qos_stats),
             "priority_queues": self.config.get("priority_queue_sizes", {}),
             "intelligent_classification": self.config.get("enable_intelligent_qos", True)
