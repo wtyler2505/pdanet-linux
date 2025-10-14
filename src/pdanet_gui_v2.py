@@ -1224,6 +1224,74 @@ class PdaNetGUI(Gtk.Window):
 
         # iPhone bypass status (shown only when in iPhone mode)
         self.update_iphone_bypass_status()
+    def update_iphone_bypass_status(self):
+        """
+        Update iPhone hotspot bypass status display
+        Shows real-time bypass effectiveness and techniques
+        """
+        try:
+            # Only show for iPhone mode
+            if (hasattr(self.connection, 'current_mode') and 
+                self.connection.current_mode == "iphone"):
+                
+                bypass_status = self.connection.get_iphone_bypass_status()
+                
+                if bypass_status.get("bypass_enabled", False):
+                    success_rate = bypass_status.get("success_rate", 0)
+                    active_techniques = len(bypass_status.get("active_techniques", []))
+                    total_techniques = bypass_status.get("total_techniques", 0)
+                    
+                    # Update stealth status with iPhone-specific information
+                    if hasattr(self, 'stealth_status'):
+                        if success_rate >= 80:
+                            color_class = "connected"
+                            status_text = f"[iPhone: {success_rate:.0f}% STEALTH]"
+                        elif success_rate >= 60:
+                            color_class = "warning"
+                            status_text = f"[iPhone: {success_rate:.0f}% STEALTH]"
+                        else:
+                            color_class = "disconnected"
+                            status_text = f"[iPhone: {success_rate:.0f}% STEALTH]"
+                        
+                        self.stealth_status.set_text(status_text)
+                        
+                        # Remove old classes and add appropriate one
+                        style_context = self.stealth_status.get_style_context()
+                        style_context.remove_class("connected")
+                        style_context.remove_class("warning")
+                        style_context.remove_class("disconnected")
+                        style_context.add_class(color_class)
+                    
+                    # Add iPhone bypass information to status panel
+                    if hasattr(self, 'status_stealth_label'):
+                        bypass_text = f"iPhone BYPASS: {active_techniques}/{total_techniques} ACTIVE"
+                        if success_rate >= 80:
+                            self.status_stealth_label.get_children()[1].set_markup(
+                                f"<span foreground='{Colors.GREEN}'>{bypass_text}</span>"
+                            )
+                        elif success_rate >= 60:
+                            self.status_stealth_label.get_children()[1].set_markup(
+                                f"<span foreground='{Colors.ORANGE}'>{bypass_text}</span>"
+                            )
+                        else:
+                            self.status_stealth_label.get_children()[1].set_markup(
+                                f"<span foreground='{Colors.RED}'>{bypass_text}</span>"
+                            )
+                    
+                    # Log bypass effectiveness
+                    if success_rate < 70:
+                        self.logger.warning(f"iPhone bypass effectiveness low: {success_rate:.0f}%")
+                        
+                        # Show notification for low effectiveness
+                        self.show_notification(
+                            "iPhone Bypass Warning",
+                            f"Bypass effectiveness: {success_rate:.0f}%. Connection may be detected by carrier.",
+                            "warning"
+                        )
+                        
+        except Exception as e:
+            self.logger.error(f"Failed to update iPhone bypass status: {e}")
+    
         
     def update_network_quality(self):
         """Calculate and update network quality indicator with color coding"""
