@@ -1521,6 +1521,52 @@ class PdaNetGUI(Gtk.Window):
         self.last_log_count = 0
         self.logger.ok("Log buffer cleared")
 
+    def check_first_run(self):
+        """Check if this is the first run and show wizard if needed"""
+        try:
+            first_run = self.config.get("first_run", True)
+            if first_run:
+                # Show first run wizard
+                wizard = FirstRunWizard(parent=self)
+                response = wizard.run()
+                
+                if response == Gtk.ResponseType.OK:
+                    # Wizard completed successfully
+                    wizard_data = wizard.get_wizard_data()
+                    
+                    # Apply wizard settings
+                    if wizard_data.get('auto_connect'):
+                        self.config.set("auto_reconnect", True)
+                        self.connection.enable_auto_reconnect(True)
+                    
+                    if wizard_data.get('enable_notifications'):
+                        self.config.set("notifications_enabled", True)
+                    
+                    if wizard_data.get('preferred_mode'):
+                        self.config.set("default_connection_mode", wizard_data['preferred_mode'])
+                    
+                    self.logger.info("First run wizard completed")
+                    self.show_notification(
+                        "Welcome to PdaNet Linux!",
+                        "Setup completed. You're ready to start tethering!",
+                        "info"
+                    )
+                else:
+                    # Wizard was cancelled, but mark as not first run anyway
+                    self.logger.info("First run wizard cancelled")
+                
+                # Mark first run as completed
+                self.config.set("first_run", False)
+                self.config.save()
+                
+                wizard.destroy()
+                
+        except Exception as e:
+            self.logger.error(f"First run wizard error: {e}")
+            # Mark as not first run to avoid repeated errors
+            self.config.set("first_run", False)
+            self.config.save()
+
     def load_settings(self):
         """Load settings from config"""
         # Auto-reconnect
