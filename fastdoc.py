@@ -196,23 +196,25 @@ class FastDoc:
         results = []
         flags = 0 if case_sensitive else re.IGNORECASE
         
-        for module_path, module_info in self.modules.items():
-            if module_info.get('error'):
-                continue
-                
+        # Search in all Python files in the project
+        python_files = list(self.project_path.rglob("*.py"))
+        
+        for file_path in python_files:
             try:
-                with open(self.project_path / module_path, 'r') as f:
+                with open(file_path, 'r', encoding='utf-8') as f:
                     lines = f.readlines()
+                
+                relative_path = file_path.relative_to(self.project_path)
                 
                 for i, line in enumerate(lines, 1):
                     if re.search(pattern, line, flags):
                         results.append({
-                            'file': module_path,
+                            'file': str(relative_path),
                             'line': i,
                             'content': line.strip(),
-                            'context': lines[max(0, i-2):i+1] if i > 1 else [line]
+                            'context': [l.strip() for l in lines[max(0, i-2):i+1]]
                         })
-            except Exception:
+            except Exception as e:
                 continue
         
         return results
